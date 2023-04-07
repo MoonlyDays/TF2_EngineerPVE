@@ -1,0 +1,15 @@
+"Games"
+{
+	"tf"
+	{
+		"Offsets"
+		{
+			"CTFPlayer::EquipWearable"
+			{
+				"windows"	"438"
+				"linux"		"439"
+				"mac"		"431"
+			}
+		}
+	}
+}
