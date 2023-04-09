@@ -5,34 +5,14 @@
 #include <tf2>
 #include <tf2_stocks>
 
-#define DANE_TEAM_HUMANS 		TFTeam_Blue
-#define DANE_TEAM_HUMANS_NAME 	"blue"
-#define DANE_TEAM_BOTS 			TFTeam_Red
-#define DANE_TEAM_BOTS_NAME		"red"
+#define PVE_TEAM_HUMANS_NAME 	"blue"
+#define PVE_TEAM_HUMANS			TFTeam_Blue
+#define PVE_TEAM_BOTS_NAME 		"red"
+#define PVE_TEAM_BOTS			TFTeam_Red
+#define TF_MAXPLAYERS 			32
 
-#define DANE_BOT_CLASS_NAME		"engineer"
-#define DANE_BOT_CLASS			TF2_GetClass(BOT_CLASS_NAME)
-
-#define TF_PAINT_WHITE 			0xE6E6E6
-
-char g_szBotNames[][] = {
-	"Uncle Dane-O",
-	"Uncle D-Man",
-	"Unkie Dane",
-	"Uncle Danno",
-	"Uncle Danimal",
-	"Unkie D",
-	"Uncle D-Dawg",
-	"Uncle Dizzle",
-	"Unkie Doodle",
-	"Uncle Danosaur",
-	"Uncle D-Money",
-	"Unkie D-Train",
-	"Uncle D-Funk",
-	"Uncle D-Cakes",
-	"Unkie D-Swag",
-	"Uncle D-Licious"
-};
+#define PVE_BOT_CLASS_NAME 		"engineer"
+#define PVE_BOT_CLASS 			TF2_GetClass(PVE_BOT_CLASS_NAME)
 
 public Plugin myinfo = 
 {
@@ -81,9 +61,57 @@ public OnPluginStart()
 
 }
 
-public LoadConfig()
-{
+ArrayList g_hNamesList;
 
+public Config_LoadConfig()
+{
+	delete g_hCosmeticsList;
+
+	char szCfgPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, szCfgPath, sizeof(szCfgPath), "configs/davepve.cfg");
+
+	KeyValues kv = new KeyValues("UncleDanePVE");
+	kv.ImportFromFile(szCfgPath);
+
+	if(kv.JumpToKey("Names"))
+	{
+		Config_LoadNamesFromKV(kv);
+		kv.GoBack();
+	}
+}
+
+public Config_LoadNamesFromKV(KeyValues kv)
+{
+	delete g_hNamesList;
+	g_hNamesList = new ArrayList(ByteCountToCells(PLATFORM_MAX_PATH));
+	
+	if(kv.GotoFirstSubKey(false))
+	{
+		do {
+			char szName[PLATFORM_MAX_PATH];
+			kv.GetString(NULL_STRING, szName);
+			g_hNamesList.PushString(szName);
+		} while (kv.GotoNextKey(false));
+
+		kv.GoBack();
+	}
+}
+
+public Config_LoadCosmeticsFromKV(KeyValues kv)
+{
+	delete g_hCosmeticsList;
+	g_hCosmeticsList = new ArrayList(ByteCountToCells(PLATFORM_MAX_PATH));
+	
+	if(kv.GotoFirstSubKey(false))
+	{
+		do {
+			char szName[PLATFORM_MAX_PATH];
+			kv.GetString(NULL_STRING, szName);
+			g_hNamesList.PushString(szName);
+		} while (kv.GotoNextKey(false));
+
+		kv.GoBack();
+	}
 }
 
 //-------------------------------------------------------//
@@ -93,7 +121,7 @@ public LoadConfig()
 /**
  * Verifies and fixes all issues with client team placement.
  */
-public ValidateClientTeams()
+public PVE_ValidateClientTeams()
 {
 	// Go through all clients and verify them.
 	for(int i = 1; i <= MaxClients; i++)
@@ -112,8 +140,8 @@ public ValidateClientTeams()
 
 		// Figure out which team the client needs to be in.
 		TFTeam requiredTeam = IsFakeClient(i) 
-			? DANE_TEAM_BOTS
-			: DANE_TEAM_HUMANS;
+			? PVE_TEAM_BOTS
+			: PVE_TEAM_HUMANS;
 
 		// Assert that client is on that correct team.
 		if(currentTeam != requiredTeam)
@@ -125,12 +153,12 @@ public ValidateClientTeams()
 }
 
 /**
- * Make sure we have enough bots on the server.
+ * Make sure we have enough bots on the server. 
  */
-public ValidateBotCount()
+public PVE_ValidateBotCount()
 {
 	int targetBotCount = dane_bot_limit.IntValue;
-	int currentBotCount = TF2_GetClientCountInTeam(DANE_TEAM_BOTS);
+	int currentBotCount = TF2_GetClientCountInTeam(PVE_TEAM_BOTS);
 	int countDiff = targetBotCount - currentBotCount;
 	int diffDir = countDiff > 0 ? 1 : -1;
 	
@@ -140,7 +168,7 @@ public ValidateBotCount()
 		if(currentBotCount < targetBotCount)
 		{
 			// Create a new uncle dane bot.
-			CreateNamedBot();
+			PVE_CreateNamedBot();
 		}
 		else
 		{
@@ -151,31 +179,36 @@ public ValidateBotCount()
 	}
 }
 
-public CreateNamedBot()
+public PVE_CreateNamedBot()
 {
 	// Figure out the name of the bot.
 	// Make a static variable to store current local name index.
 	static int currentName = -1;
 	// Rotate the names
-	int maxNames = sizeof(g_szBotNames);
+	int maxNames = g_Config.m_hNames.Length;
 	currentName++;
 	currentName %= maxNames;
 
 	char szName[PLATFORM_MAX_PATH];
-	strcopy(szName, sizeof(szName), g_szBotNames[currentName]);
+	g_Config.m_hCosmetics.GetString(currentName, szName, sizeof(szName));
 
-	// Allocate the bot itself.
+	// Format the command to summon a new bot.
 	char szCommand[PLATFORM_MAX_PATH];
-	Format(szCommand, sizeof(szCommand), "tf_bot_add %s %s \"%s\"", DANE_BOT_CLASS_NAME, DANE_TEAM_BOTS_NAME, szName);
+	Format(szCommand, sizeof(szCommand), "tf_bot_add %s %s \"%s\"", 
+		PVE_BOT_CLASS_NAME, 
+		PVE_TEAM_BOTS_NAME, 
+		szName);
+	
+	// Summon the bot.
 	ServerCommand(szCommand);
 }
 
-public PrepareRound()
+public PVE_PrepareRound()
 {
 	// Change the values of all the console variables.
-	tf_bot_force_class.SetString(DANE_BOT_CLASS_NAME);
+	tf_bot_force_class.SetString(PVE_BOT_CLASS_NAME);
 	mp_forceautoteam.SetBool(true);
-	mp_humans_must_join_team.SetString(DANE_TEAM_HUMANS_NAME);
+	mp_humans_must_join_team.SetString(PVE_TEAM_HUMANS_NAME);
 	mp_teams_unbalance_limit.SetInt(0);
 
 	int visPlayers = maxplayers.IntValue - dane_bot_limit.IntValue;
@@ -185,7 +218,7 @@ public PrepareRound()
 	ValidateBotCount();
 }
 
-public EquipEngineerBot()
+public EquipEngineerBot(int client)
 {
 
 }
@@ -203,11 +236,11 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 public Action post_inventory_application(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
+
+	// 
 	if(IsFakeClient(client))
 	{
-		TF2_CreateWearable(client, 30539, TF_PAINT_WHITE);
-		TF2_CreateWearable(client, 30420, TF_PAINT_WHITE);
-		TF2_CreateWearable(client, 30172, TF_PAINT_WHITE);
+		EquipEngineerBot(client);
 	}
 
 	return Plugin_Continue;
