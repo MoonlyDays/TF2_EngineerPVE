@@ -5,14 +5,7 @@
 #include <tf2>
 #include <tf2_stocks>
 
-#define PVE_TEAM_HUMANS_NAME 	"blue"
-#define PVE_TEAM_HUMANS			TFTeam_Blue
-#define PVE_TEAM_BOTS_NAME 		"red"
-#define PVE_TEAM_BOTS			TFTeam_Red
-#define TF_MAXPLAYERS 			32
-
-#define PVE_BOT_CLASS_NAME 		"engineer"
-#define PVE_BOT_CLASS 			TF2_GetClass(PVE_BOT_CLASS_NAME)
+#include <danepve/constants.sp>
 
 public Plugin myinfo = 
 {
@@ -23,7 +16,10 @@ public Plugin myinfo =
 	url = "https://github.com/MoonlyDays"
 };
 
+// Plugin ConVars
 ConVar dane_bot_limit;
+
+// Native ConVars
 ConVar tf_bot_force_class;
 ConVar mp_humans_must_join_team;
 ConVar mp_forceautoteam;
@@ -31,7 +27,11 @@ ConVar mp_teams_unbalance_limit;
 ConVar sv_visiblemaxplayers;
 ConVar maxplayers;
 
+// SDK Call Handles
 Handle g_hSdkEquipWearable;
+
+ArrayList g_hBotCosmetics;
+ArrayList g_hBotNames;
 
 public OnPluginStart()
 {
@@ -50,61 +50,84 @@ public OnPluginStart()
 	HookEvent("teamplay_round_start", 		teamplay_round_start);
 	HookEvent("post_inventory_application", post_inventory_application);
 	
-	// GameData
+	// Prepare SDK calls from Game Data
 	Handle hConf = LoadGameConfigFile("tf2.danepve");
 	StartPrepSDKCall(SDKCall_Player);
 	PrepSDKCall_SetFromConf(hConf, SDKConf_Virtual, "CTFPlayer::EquipWearable");
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
 	g_hSdkEquipWearable = EndPrepSDKCall();
 
-	LoadConfig();
-
+	Config_Load();
 }
 
-ArrayList g_hNamesList;
-
-public Config_LoadConfig()
+/** Reload the plugin config */
+public Config_Load()
 {
-	delete g_hCosmeticsList;
-
+	// Build the path to the config file. 
 	char szCfgPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, szCfgPath, sizeof(szCfgPath), "configs/davepve.cfg");
 
+	// Load the keyvalues.
 	KeyValues kv = new KeyValues("UncleDanePVE");
 	kv.ImportFromFile(szCfgPath);
 
+	// Try to load bot names.
 	if(kv.JumpToKey("Names"))
 	{
 		Config_LoadNamesFromKV(kv);
 		kv.GoBack();
 	}
+
+	// Try to load bot cosmetics.
+	if(kv.JumpToKey("Cosmetics"))
+	{
+		Config_LoadCosmeticsFromKV(kv);
+		kv.GoBack();
+	}
 }
 
+/** Reload the bot names that will be on the bot team. */
 public Config_LoadNamesFromKV(KeyValues kv)
 {
-	delete g_hNamesList;
-	g_hNamesList = new ArrayList(ByteCountToCells(PLATFORM_MAX_PATH));
+	delete g_hBotNames;
+	g_hBotNames = new ArrayList(ByteCountToCells(PLATFORM_MAX_PATH));
 	
 	if(kv.GotoFirstSubKey(false))
 	{
 		do {
 			char szName[PLATFORM_MAX_PATH];
 			kv.GetString(NULL_STRING, szName);
-			g_hNamesList.PushString(szName);
+			g_hBotNames.PushString(szName);
 		} while (kv.GotoNextKey(false));
 
 		kv.GoBack();
 	}
 }
 
+/**
+ * Load bot cosmetics definitions from config.
+ */
 public Config_LoadCosmeticsFromKV(KeyValues kv)
 {
-	delete g_hCosmeticsList;
-	g_hCosmeticsList = new ArrayList(ByteCountToCells(PLATFORM_MAX_PATH));
+	delete g_hBotCosmetics;
+	g_hBotCosmetics = new ArrayList(sizeof(BotCosmetic));
 	
 	if(kv.GotoFirstSubKey(false))
 	{
 		do {
+			BotCosmetic cosmetic;
+			cosmetic.m_iDefinitionIndex = kv.GetNum("Index");
+			
+			if(kv.JumpToKey("Attributes"))
+			{
+				if(kv.GotoFirstSubKey(false))
+				{
+					do {
+
+					} while (kv.GotoNextKey(false))
+				}
+			}
+
 			char szName[PLATFORM_MAX_PATH];
 			kv.GetString(NULL_STRING, szName);
 			g_hNamesList.PushString(szName);
