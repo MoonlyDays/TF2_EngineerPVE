@@ -220,7 +220,7 @@ public PVE_ValidateClientTeams()
 		if(currentTeam != requiredTeam)
 		{
 			// Switch teams.
-			TF2_ChangeClientTeam(i, requiredTeam);
+			PVE_SwitchClientTeamSilent(i, requiredTeam);
 		}
 	}
 }
@@ -338,6 +338,12 @@ int PVE_GiveWearableToClient(int client, int itemDef)
 	return hat;
 } 
 
+void PVE_SwitchClientTeamSilent(int client, TFTeam team)
+{
+	SetEntProp(client, Prop_Send, "m_iTeamNum", view_as<int>(team));
+	TF2_RespawnPlayer(client);
+}
+
 //-------------------------------------------------------//
 // ConVars
 //-------------------------------------------------------//
@@ -374,7 +380,7 @@ public Action post_inventory_application(Event event, const char[] name, bool do
 	else 
 	{
 		// TEST!
-		TF2Attrib_SetByName(client, "increase player capture value", 5.0);
+		// TF2Attrib_SetByName(client, "increase player capture value", 5.0);
 	}
 
 	return Plugin_Continue;
