@@ -7,6 +7,8 @@
 
 #include <danepve/constants.sp>
 
+#define PLUGIN_VERSION "1.0.0"
+
 public Plugin myinfo = 
 {
 	name = "[TF2] Uncle Dane PVE",
@@ -17,7 +19,7 @@ public Plugin myinfo =
 };
 
 // Plugin ConVars
-ConVar dane_bot_limit;
+ConVar danepve_bot_limit;
 
 // Native ConVars
 ConVar tf_bot_force_class;
@@ -25,18 +27,18 @@ ConVar mp_humans_must_join_team;
 ConVar mp_forceautoteam;
 ConVar mp_teams_unbalance_limit;
 ConVar sv_visiblemaxplayers;
-ConVar maxplayers;
 
 // SDK Call Handles
 Handle g_hSdkEquipWearable;
 
-ArrayList g_hBotCosmetics;
-ArrayList g_hBotNames;
+ArrayList g_hBotCosmetics = null;
+ArrayList g_hBotNames = null;
 
 public OnPluginStart()
 {
 	// Create plugin ConVars
-	dane_bot_limit = CreateConVar("dane_bot_limit", "16");
+	CreateConVar("danepve_version", PLUGIN_VERSION, "[TF2] Uncle Dane PVE Version", FCVAR_DONTRECORD);
+	danepve_bot_limit = CreateConVar("danepve_bot_limit", "16", "Amount of bots to spawn on the BOT team.");
 
 	// Find Native ConVars
 	tf_bot_force_class 			= FindConVar("tf_bot_force_class");
@@ -44,10 +46,12 @@ public OnPluginStart()
 	mp_forceautoteam 			= FindConVar("mp_forceautoteam");
 	mp_teams_unbalance_limit 	= FindConVar("mp_teams_unbalance_limit");
 	sv_visiblemaxplayers 		= FindConVar("sv_visiblemaxplayers");
-	maxplayers 					= FindConVar("maxplayers");
+
+	// Admin Commands
+	RegAdminCmd("sm_danepve_reload", cReload, ADMFLAG_CHANGEMAP, "Reloads Uncle Dane PVE config.");
 
 	// Hook Events
-	HookEvent("teamplay_round_start", 		teamplay_round_start);
+	HookEvent("teamplay_round_start", 	teamplay_round_start);
 	HookEvent("post_inventory_application", post_inventory_application);
 	
 	// Prepare SDK calls from Game Data
@@ -58,6 +62,8 @@ public OnPluginStart()
 	g_hSdkEquipWearable = EndPrepSDKCall();
 
 	Config_Load();
+
+	PVE_ValidateGameForRound();
 }
 
 /** Reload the plugin config */
@@ -65,11 +71,15 @@ public Config_Load()
 {
 	// Build the path to the config file. 
 	char szCfgPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, szCfgPath, sizeof(szCfgPath), "configs/davepve.cfg");
+	BuildPath(Path_SM, szCfgPath, sizeof(szCfgPath), "configs/danepve.cfg");
 
 	// Load the keyvalues.
 	KeyValues kv = new KeyValues("UncleDanePVE");
-	kv.ImportFromFile(szCfgPath);
+	if(kv.ImportFromFile(szCfgPath) == false)
+	{
+		SetFailState("Failed to read configs/danepve.cfg");
+		return;
+	}
 
 	// Try to load bot names.
 	if(kv.JumpToKey("Names"))
@@ -96,7 +106,7 @@ public Config_LoadNamesFromKV(KeyValues kv)
 	{
 		do {
 			char szName[PLATFORM_MAX_PATH];
-			kv.GetString(NULL_STRING, szName);
+			kv.GetString(NULL_STRING, szName, sizeof(szName));
 			g_hBotNames.PushString(szName);
 		} while (kv.GotoNextKey(false));
 
@@ -109,28 +119,53 @@ public Config_LoadNamesFromKV(KeyValues kv)
  */
 public Config_LoadCosmeticsFromKV(KeyValues kv)
 {
+	if(g_hBotCosmetics != INVALID_HANDLE)
+	{
+		for(int i = 0; i < g_hBotCosmetics.Length; i++)
+		{
+			BotCosmetic cosmetic;
+			g_hBotCosmetics.GetArray(i, cosmetic);
+			delete cosmetic.m_Attributes;
+		}
+	}
+	
 	delete g_hBotCosmetics;
+
 	g_hBotCosmetics = new ArrayList(sizeof(BotCosmetic));
 	
 	if(kv.GotoFirstSubKey(false))
 	{
 		do {
+			// Create bot cosmetic definition.
 			BotCosmetic cosmetic;
-			cosmetic.m_iDefinitionIndex = kv.GetNum("Index");
+			cosmetic.m_DefinitionIndex = kv.GetNum("Index");
 			
+			// Check if cosmetic definition contains attributes.
 			if(kv.JumpToKey("Attributes"))
 			{
+				// If so, create an array list.
+				cosmetic.m_Attributes = new ArrayList(sizeof(BotCosmeticAttribute));
+
+				// Try going to the first attribute scope.
 				if(kv.GotoFirstSubKey(false))
 				{
 					do {
+						// Read name and float value, add the pair to the attributes array.
+						BotCosmeticAttribute attrib;
+						kv.GetSectionName(attrib.m_szName, sizeof(attrib.m_szName));
+						attrib.m_flValue = kv.GetFloat(NULL_STRING);
+						cosmetic.m_Attributes.PushArray(attrib);
 
 					} while (kv.GotoNextKey(false))
+
+					kv.GoBack();
 				}
+
+				kv.GoBack();
 			}
 
-			char szName[PLATFORM_MAX_PATH];
-			kv.GetString(NULL_STRING, szName);
-			g_hNamesList.PushString(szName);
+			g_hBotCosmetics.PushArray(cosmetic);
+
 		} while (kv.GotoNextKey(false));
 
 		kv.GoBack();
@@ -140,6 +175,21 @@ public Config_LoadCosmeticsFromKV(KeyValues kv)
 //-------------------------------------------------------//
 // GAMEMODE STOCKS
 //-------------------------------------------------------//
+
+public PVE_ValidateGameForRound()
+{
+	// Change the values of all the console variables.
+	tf_bot_force_class.SetString(PVE_BOT_CLASS_NAME);
+	mp_forceautoteam.SetBool(true);
+	mp_humans_must_join_team.SetString(PVE_TEAM_HUMANS_NAME);
+	mp_teams_unbalance_limit.SetInt(0);
+
+	int visPlayers = MaxClients - danepve_bot_limit.IntValue;
+	sv_visiblemaxplayers.SetInt(visPlayers);
+
+	PVE_ValidateClientTeams();
+	PVE_ValidateBotCount();
+}
 
 /**
  * Verifies and fixes all issues with client team placement.
@@ -180,7 +230,7 @@ public PVE_ValidateClientTeams()
  */
 public PVE_ValidateBotCount()
 {
-	int targetBotCount = dane_bot_limit.IntValue;
+	int targetBotCount = danepve_bot_limit.IntValue;
 	int currentBotCount = TF2_GetClientCountInTeam(PVE_TEAM_BOTS);
 	int countDiff = targetBotCount - currentBotCount;
 	int diffDir = countDiff > 0 ? 1 : -1;
@@ -196,7 +246,7 @@ public PVE_ValidateBotCount()
 		else
 		{
 			// Kick bot
-			int client = FindNextBotToKick();
+			int client = PVE_FindNextBotToKick();
 			if(client > 0) KickClient(client);
 		}
 	}
@@ -208,12 +258,12 @@ public PVE_CreateNamedBot()
 	// Make a static variable to store current local name index.
 	static int currentName = -1;
 	// Rotate the names
-	int maxNames = g_Config.m_hNames.Length;
+	int maxNames = g_hBotNames.Length;
 	currentName++;
 	currentName %= maxNames;
 
 	char szName[PLATFORM_MAX_PATH];
-	g_Config.m_hCosmetics.GetString(currentName, szName, sizeof(szName));
+	g_hBotNames.GetString(currentName, szName, sizeof(szName));
 
 	// Format the command to summon a new bot.
 	char szCommand[PLATFORM_MAX_PATH];
@@ -226,53 +276,10 @@ public PVE_CreateNamedBot()
 	ServerCommand(szCommand);
 }
 
-public PVE_PrepareRound()
-{
-	// Change the values of all the console variables.
-	tf_bot_force_class.SetString(PVE_BOT_CLASS_NAME);
-	mp_forceautoteam.SetBool(true);
-	mp_humans_must_join_team.SetString(PVE_TEAM_HUMANS_NAME);
-	mp_teams_unbalance_limit.SetInt(0);
-
-	int visPlayers = maxplayers.IntValue - dane_bot_limit.IntValue;
-	sv_visiblemaxplayers.SetInt(visPlayers);
-
-	ValidateClientTeams();
-	ValidateBotCount();
-}
-
-public EquipEngineerBot(int client)
-{
-
-}
-
-//-------------------------------------------------------//
-// GAME EVENTS
-//-------------------------------------------------------//
-
-public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast)
-{
-	PrepareRound();
-	return Plugin_Continue;
-}
-
-public Action post_inventory_application(Event event, const char[] name, bool dontBroadcast)
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-
-	// 
-	if(IsFakeClient(client))
-	{
-		EquipEngineerBot(client);
-	}
-
-	return Plugin_Continue;
-}
-
 /**
  * Returns the next bot to kick.
  */
-public int FindNextBotToKick()
+public int PVE_FindNextBotToKick()
 {
 	for(int i = MaxClients; i >= 1; i--)
 	{
@@ -282,7 +289,7 @@ public int FindNextBotToKick()
 		if(!IsFakeClient(i))
 			continue;
 
-		if(TF2_GetClientTeam(i) != DANE_TEAM_BOTS)
+		if(TF2_GetClientTeam(i) != PVE_TEAM_BOTS)
 			continue;
 
 		return i;
@@ -291,11 +298,32 @@ public int FindNextBotToKick()
 	return -1;
 }
 
-bool TF2_CreateWearable(int client, int itemDef, int color = -1)
+public PVE_EquipBotCosmetics(int client)
+{
+	for(int i = 0; i < g_hBotCosmetics.Length; i++)
+	{
+		BotCosmetic cosmetic;
+		g_hBotCosmetics.GetArray(i, cosmetic);
+
+		int hat = PVE_GiveWearableToClient(client, cosmetic.m_DefinitionIndex);
+		if(hat <= 0)
+			continue;
+			
+		for(int j = 0; j < cosmetic.m_Attributes.Length; j++)
+		{
+			BotCosmeticAttribute attrib;
+			cosmetic.m_Attributes.GetArray(j, attrib);
+
+			TF2Attrib_SetByName(hat, attrib.m_szName, attrib.m_flValue);
+		}
+	}
+}
+
+int PVE_GiveWearableToClient(int client, int itemDef)
 {
 	int hat = CreateEntityByName("tf_wearable");
-	if (!IsValidEntity(hat))
-		return false;
+	if(!IsValidEntity(hat))
+		return -1;
 	
 	SetEntProp(hat, Prop_Send, "m_iItemDefinitionIndex", itemDef);
 	SetEntProp(hat, Prop_Send, "m_bInitialized", 1);
@@ -305,16 +333,52 @@ bool TF2_CreateWearable(int client, int itemDef, int color = -1)
 	SetEntProp(hat, Prop_Send, "m_iAccountID", GetSteamAccountID(client));
 	SetEntPropEnt(hat, Prop_Send, "m_hOwnerEntity", client);
 
-	if(color >= 0)
-	{
-		TF2Attrib_SetByName(hat, "set item tint RGB", float(color));
-		TF2Attrib_SetByName(hat, "set item tint RGB 2", float(color));
-	}
-
 	DispatchSpawn(hat);
 	SDKCall(g_hSdkEquipWearable, client, hat);
-	return true;
+	return hat;
 } 
+
+//-------------------------------------------------------//
+// ConVars
+//-------------------------------------------------------//
+
+public Action cReload(int client, int args)
+{
+	Config_Load();
+	ReplyToCommand(client, "[SM] Uncle Dane PVE config was reloaded!");
+	return Plugin_Handled;
+}
+
+//-------------------------------------------------------//
+// GAME EVENTS
+//-------------------------------------------------------//
+
+public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast)
+{
+	PVE_ValidateGameForRound();
+	return Plugin_Continue;
+}
+
+public Action post_inventory_application(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+
+	if(IsFakeClient(client))
+	{
+		PVE_EquipBotCosmetics(client);
+
+		// Infinite metal for bots!
+		TF2Attrib_SetByName(client, "metal regen", 5000.0);
+		TF2Attrib_SetByName(client, "maxammo metal increased", 25.0);
+	}
+	else 
+	{
+		// TEST!
+		TF2Attrib_SetByName(client, "increase player capture value", 5.0);
+	}
+
+	return Plugin_Continue;
+}
 
 int TF2_GetClientCountInTeam(TFTeam team)
 {

@@ -17,8 +17,14 @@
 /** Maximum amount of attributes on a bot cosmetic */
 #define PVE_MAX_COSMETIC_ATTRS 8
 
+enum struct BotCosmeticAttribute
+{
+	char m_szName[PLATFORM_MAX_PATH];
+	float m_flValue;
+}
+
 enum struct BotCosmetic
 {
-	int m_iDefinitionIndex;
-	char m_szAttributesNames[PVE_MAX_COSMETIC_ATTRS];
+	int m_DefinitionIndex;
+	ArrayList m_Attributes;
 } 
