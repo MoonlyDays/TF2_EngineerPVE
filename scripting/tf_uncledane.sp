@@ -47,20 +47,14 @@ public OnPluginStart()
 
 	//
 	// Hook Events
-	//
-
 	HookEvent("post_inventory_application", post_inventory_application);
 	
 	//
 	// Offsets Cache
-	//
-
 	g_nOffset_CBaseEntity_m_iTeamNum = FindSendPropInfo("CBaseEntity", "m_iTeamNum");
 
 	//
 	// Prepare SDK calls from Game Data
-	//
-
 	Handle hConf = LoadGameConfigFile("tf2.danepve");
 	StartPrepSDKCall(SDKCall_Player);
 	PrepSDKCall_SetFromConf(hConf, SDKConf_Virtual, "CTFPlayer::EquipWearable");
@@ -83,7 +77,7 @@ public OnPluginStart()
 
 	int offset = GameConfGetOffset(hConf, "CTFGameRules::HandleSwitchTeams");
 	gHook_HandleSwitchTeams = DHookCreate(offset, HookType_GameRules, ReturnType_Void, ThisPointer_Ignore, CTFGameRules_HandleSwitchTeams);
-	
+
 	//
 	// Load config and setup the game
 	//
