@@ -24,7 +24,12 @@
 			{
 				"windows"	"438"
 				"linux"		"439"
-				"mac"		"431"
+			}
+			
+			"CTFGameRules::HandleSwitchTeams"
+			{
+				"windows"	"168"
+				"linux"		"169"
 			}
 		}
 	}

@@ -9,15 +9,10 @@
 /** Maximum amount of players that can be on the server in TF2 */
 #define TF_MAXPLAYERS 			32
 
-/** Name of the class that bots play as. */
-#define PVE_BOT_CLASS_NAME 		"engineer"
-/** Internal game index of the bot class. */
-#define PVE_BOT_CLASS 			TF2_GetClass(PVE_BOT_CLASS_NAME)
-
 /** Maximum amount of attributes on a bot cosmetic */
 #define PVE_MAX_COSMETIC_ATTRS 8
 
-enum struct BotCosmeticAttribute
+enum struct TFAttribute
 {
 	char m_szName[PLATFORM_MAX_PATH];
 	float m_flValue;
