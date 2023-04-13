@@ -48,6 +48,7 @@ public Config_Load()
 	char szClassName[32];
 	kv.GetString("Class", szClassName, sizeof(szClassName));
 	FindConVar("tf_bot_force_class")		.SetString(szClassName);
+	FindConVar("tf_bot_difficulty")			.SetInt(kv.GetNum("Difficulty"));
 	FindConVar("mp_forceautoteam")			.SetBool(true);
 	FindConVar("mp_humans_must_join_team")	.SetString(PVE_TEAM_HUMANS_NAME);
 	FindConVar("mp_disable_respawn_times")	.SetBool(true);
