@@ -14,6 +14,7 @@ TODO: Add more information
 
 - Bot count now uses tf_bot_quota
 - Added support for weapon customization
+- Golden Pan Easter Egg!
 
 ### 0.1.0
 

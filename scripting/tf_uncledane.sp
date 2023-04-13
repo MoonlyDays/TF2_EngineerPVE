@@ -15,6 +15,9 @@
 /** Maximum amount of players that can be on the server in TF2 */
 #define TF_MAXPLAYERS 			32
 
+#define GOLDEN_PAN_DEFID 1071 
+#define GOLDEN_PAN_CHANCE 1
+
 const TFTeam TFTeam_Humans = TFTeam_Blue;
 const TFTeam TFTeam_Bots = TFTeam_Red;
 
@@ -189,13 +192,26 @@ public PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList 
 	BotItem item;
 	array.GetArray(rndInt, item);
 
+	int wepDefId = item.m_iItemDefinitionIndex;
+
+	// Golden Pan Easter Egg!!!
+	if(slot == TFWeaponSlot_Melee)
+	{
+		if(GetRandomInt(0, 100) < GOLDEN_PAN_CHANCE)
+		{
+			// Bot has 1% chance to have Golden Pan
+			// as their melee.
+			wepDefId = GOLDEN_PAN_DEFID;
+		}
+	}
+
 	char szClassName[64];
-	TF2Econ_GetItemClassName(item.m_iItemDefinitionIndex, szClassName, sizeof(szClassName));
+	TF2Econ_GetItemClassName(wepDefId, szClassName, sizeof(szClassName));
 	TF2Econ_TranslateWeaponEntForClass(szClassName, sizeof(szClassName), TF2_GetPlayerClass(client));
 
 	Handle hWeapon = TF2Items_CreateItem(OVERRIDE_ALL | FORCE_GENERATION | PRESERVE_ATTRIBUTES);
 	TF2Items_SetClassname(hWeapon, szClassName);
-	TF2Items_SetItemIndex(hWeapon, item.m_iItemDefinitionIndex);
+	TF2Items_SetItemIndex(hWeapon, wepDefId);
 
 	int iWeapon = TF2Items_GiveNamedItem(client, hWeapon);
 	delete hWeapon;
