@@ -4,11 +4,48 @@
 #include <tf2attributes>
 #include <tf2>
 #include <tf2_stocks>
+#include <tf2items>
+#include <tf_econ_data>
 #include <dhooks>
 
-#include <danepve/constants.sp>
+/** Display name of the humans team */
+#define PVE_TEAM_HUMANS_NAME 	"blue"
+/** Internal game index of the bots team */
+#define PVE_TEAM_BOTS_NAME 		"red"
+/** Maximum amount of players that can be on the server in TF2 */
+#define TF_MAXPLAYERS 			32
 
-#define PLUGIN_VERSION "1.1.0"
+const TFTeam TFTeam_Humans = TFTeam_Blue;
+const TFTeam TFTeam_Bots = TFTeam_Red;
+
+/** Maximum amount of attributes on a bot cosmetic */
+#define PVE_MAX_COSMETIC_ATTRS 8
+
+enum struct TFAttribute
+{
+	char m_szName[PLATFORM_MAX_PATH];
+	float m_flValue;
+}
+
+enum struct BotItem
+{
+	int m_iItemDefinitionIndex;
+	char m_szClassName[32];
+	ArrayList m_Attributes;
+} 
+
+ArrayList g_hBotCosmetics;
+ArrayList g_hPlayerAttributes;
+ArrayList g_hBotNames;
+
+// Weapon random choices.
+ArrayList g_hPrimaryWeapons;
+ArrayList g_hSecondaryWeapons;
+ArrayList g_hMeleeWeapons;
+
+#include <danepve/config.sp>
+
+#define PLUGIN_VERSION "0.1.0"
 
 public Plugin myinfo = 
 {
@@ -20,7 +57,7 @@ public Plugin myinfo =
 };
 
 // Plugin ConVars
-ConVar danepve_allow_respawnroom_build;
+ConVar sm_danepve_allow_respawnroom_build;
 
 // SDK Call Handles
 Handle g_hSdkEquipWearable;
@@ -28,12 +65,9 @@ Handle gHook_PointIsWithin;
 Handle gHook_EstimateValidBuildPos;
 Handle gHook_HandleSwitchTeams;
 
-ArrayList g_hBotCosmetics = null;
-ArrayList g_hPlayerAttributes = null;
-ArrayList g_hBotNames = null;
-
 // Offset cache
 int g_nOffset_CBaseEntity_m_iTeamNum;
+
 
 public OnPluginStart()
 {
@@ -42,7 +76,7 @@ public OnPluginStart()
 	//
 
 	CreateConVar("danepve_version", PLUGIN_VERSION, "[TF2] Uncle Dane PVE Version", FCVAR_DONTRECORD);
-	danepve_allow_respawnroom_build = CreateConVar("danepve_allow_respawnroom_build", "1", "Can humans build in respawn rooms?");
+	sm_danepve_allow_respawnroom_build = CreateConVar("sm_danepve_allow_respawnroom_build", "1", "Can humans build in respawn rooms?");
 	RegAdminCmd("sm_danepve_reload", cReload, ADMFLAG_CHANGEMAP, "Reloads Uncle Dane PVE config.");
 
 	//
@@ -103,7 +137,7 @@ public bool OnClientConnect(int client, char[] rejectMsg, int maxlen)
 public Action Timer_OnBotConnect(Handle timer, any client)
 {
 	PVE_RenameBotClient(client);
-	TF2_ChangeClientTeam(client, PVE_TEAM_BOTS);
+	TF2_ChangeClientTeam(client, TFTeam_Bots);
 
 	return Plugin_Handled;
 }
@@ -127,22 +161,60 @@ public PVE_RenameBotClient(int client)
 	SetClientName(client, szName);
 }
 
-public PVE_EquipBotCosmetics(int client)
+public PVE_EquipBotItems(int client)
 {
 	for(int i = 0; i < g_hBotCosmetics.Length; i++)
 	{
-		BotCosmetic cosmetic;
+		BotItem cosmetic;
 		g_hBotCosmetics.GetArray(i, cosmetic);
 
-		int hat = PVE_GiveWearableToClient(client, cosmetic.m_DefinitionIndex);
+		int hat = PVE_GiveWearableToClient(client, cosmetic.m_iItemDefinitionIndex);
 		if(hat <= 0)
 			continue;
 			
-		for(int j = 0; j < cosmetic.m_Attributes.Length; j++)
+		PVE_ApplyBotItemAttributesOnEntity(hat, cosmetic);
+	}
+
+	PVE_GiveBotRandomSlotWeaponFromArrayList(client, TFWeaponSlot_Primary, 		g_hPrimaryWeapons);
+	PVE_GiveBotRandomSlotWeaponFromArrayList(client, TFWeaponSlot_Secondary, 	g_hSecondaryWeapons);
+	PVE_GiveBotRandomSlotWeaponFromArrayList(client, TFWeaponSlot_Melee, 		g_hMeleeWeapons);
+}
+
+public PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList array)
+{
+	if(array == INVALID_HANDLE)
+		return;
+
+	int rndInt = GetRandomInt(0, array.Length - 1);
+	BotItem item;
+	array.GetArray(rndInt, item);
+
+	char szClassName[64];
+	TF2Econ_GetItemClassName(item.m_iItemDefinitionIndex, szClassName, sizeof(szClassName));
+	TF2Econ_TranslateWeaponEntForClass(szClassName, sizeof(szClassName), TF2_GetPlayerClass(client));
+
+	Handle hWeapon = TF2Items_CreateItem(OVERRIDE_ALL | FORCE_GENERATION);
+	TF2Items_SetClassname(hWeapon, szClassName);
+	TF2Items_SetItemIndex(hWeapon, item.m_iItemDefinitionIndex);
+
+	int iWeapon = TF2Items_GiveNamedItem(client, hWeapon);
+	delete hWeapon;
+
+	TF2_RemoveWeaponSlot(client, slot);
+	EquipPlayerWeapon(client, iWeapon);
+
+	PVE_ApplyBotItemAttributesOnEntity(iWeapon, item);
+}
+
+public PVE_ApplyBotItemAttributesOnEntity(int entity, BotItem item)
+{
+	if(item.m_Attributes)
+	{
+		for(int j = 0; j < item.m_Attributes.Length; j++)
 		{
 			TFAttribute attrib;
-			cosmetic.m_Attributes.GetArray(j, attrib);
-			TF2Attrib_SetByName(hat, attrib.m_szName, attrib.m_flValue);
+			item.m_Attributes.GetArray(j, attrib);
+			TF2Attrib_SetByName(entity, attrib.m_szName, attrib.m_flValue);
 		}
 	}
 }
@@ -197,7 +269,7 @@ public Action post_inventory_application(Event event, const char[] name, bool do
 
 	if(IsFakeClient(client))
 	{
-		PVE_EquipBotCosmetics(client);
+		PVE_EquipBotItems(client);
 		PVE_ApplyPlayerAttributes(client);
 	}
 
@@ -212,7 +284,7 @@ int g_bAllowNextHumanTeamPointCheck = false;
 
 MRESReturn Detour_EstimateValidBuildPos(Address pThis, Handle hReturn, Handle hParams)
 {
-	if(!danepve_allow_respawnroom_build.BoolValue)
+	if(!sm_danepve_allow_respawnroom_build.BoolValue)
 		return MRES_Ignored;
 
 	g_bAllowNextHumanTeamPointCheck = true;
@@ -232,7 +304,7 @@ MRESReturn Detour_OnPointIsWithin(Address pThis, Handle hReturn, Handle hParams)
 		Address addrTeam = pThis + view_as<Address>(g_nOffset_CBaseEntity_m_iTeamNum);
 		TFTeam iTeam = view_as<TFTeam>(LoadFromAddress(addrTeam, NumberType_Int8));
 		
-		if(iTeam == PVE_TEAM_HUMANS)
+		if(iTeam == TFTeam_Humans)
 		{
 			DHookSetReturn(hReturn, false);
 			return MRES_Supercede;
@@ -245,151 +317,6 @@ MRESReturn Detour_OnPointIsWithin(Address pThis, Handle hReturn, Handle hParams)
 // void CTFGameRules::HandleSwitchTeams( void );
 public MRESReturn CTFGameRules_HandleSwitchTeams( int pThis, Handle hParams ) 
 {
+	PrintToChatAll("Team switching is disabled.");
 	return MRES_Supercede;
-}
-
-//-------------------------------------------------------//
-// CONFIG
-//-------------------------------------------------------//
-
-/** Reload the plugin config */
-public Config_Load()
-{
-	// Build the path to the config file. 
-	char szCfgPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, szCfgPath, sizeof(szCfgPath), "configs/danepve.cfg");
-
-	// Load the keyvalues.
-	KeyValues kv = new KeyValues("UncleDanePVE");
-	if(kv.ImportFromFile(szCfgPath) == false)
-	{
-		SetFailState("Failed to read configs/danepve.cfg");
-		return;
-	}
-
-	// Try to load bot names.
-	if(kv.JumpToKey("Names"))
-	{
-		Config_LoadNamesFromKV(kv);
-		kv.GoBack();
-	}
-
-	// Try to load bot cosmetics.
-	if(kv.JumpToKey("Cosmetics"))
-	{
-		Config_LoadCosmeticsFromKV(kv);
-		kv.GoBack();
-	}
-
-	// Try to load bot cosmetics.
-	if(kv.JumpToKey("Attributes"))
-	{
-		Config_LoadAttributesFromKV(kv);
-		kv.GoBack();
-	}
-
-	char szClassName[32];
-	kv.GetString("Class", szClassName, sizeof(szClassName));
-	FindConVar("tf_bot_force_class")		.SetString(szClassName);
-	FindConVar("mp_forceautoteam")			.SetBool(true);
-	FindConVar("mp_humans_must_join_team")	.SetString(PVE_TEAM_HUMANS_NAME);
-	FindConVar("mp_disable_respawn_times")	.SetBool(true);
-	FindConVar("mp_teams_unbalance_limit")	.SetInt(0);
-}
-
-/** Reload the bot names that will be on the bot team. */
-public Config_LoadNamesFromKV(KeyValues kv)
-{
-	delete g_hBotNames;
-	g_hBotNames = new ArrayList(ByteCountToCells(PLATFORM_MAX_PATH));
-	
-	if(kv.GotoFirstSubKey(false))
-	{
-		do {
-			char szName[PLATFORM_MAX_PATH];
-			kv.GetString(NULL_STRING, szName, sizeof(szName));
-			g_hBotNames.PushString(szName);
-		} while (kv.GotoNextKey(false));
-
-		kv.GoBack();
-	}
-}
-
-/** Reload the bot names that will be on the bot team. */
-public Config_LoadAttributesFromKV(KeyValues kv)
-{
-	delete g_hPlayerAttributes;
-	g_hPlayerAttributes = new ArrayList(sizeof(TFAttribute));
-	
-	if(kv.GotoFirstSubKey(false))
-	{
-		do {
-			// Read name and float value, add the pair to the attributes array.
-			TFAttribute attrib;
-			kv.GetSectionName(attrib.m_szName, sizeof(attrib.m_szName));
-			attrib.m_flValue = kv.GetFloat(NULL_STRING);
-			g_hPlayerAttributes.PushArray(attrib);
-
-		} while (kv.GotoNextKey(false));
-
-		kv.GoBack();
-	}
-}
-
-/**
- * Load bot cosmetics definitions from config.
- */
-public Config_LoadCosmeticsFromKV(KeyValues kv)
-{
-	if(g_hBotCosmetics != INVALID_HANDLE)
-	{
-		for(int i = 0; i < g_hBotCosmetics.Length; i++)
-		{
-			BotCosmetic cosmetic;
-			g_hBotCosmetics.GetArray(i, cosmetic);
-			delete cosmetic.m_Attributes;
-		}
-	}
-	
-	delete g_hBotCosmetics;
-
-	g_hBotCosmetics = new ArrayList(sizeof(BotCosmetic));
-	
-	if(kv.GotoFirstSubKey(false))
-	{
-		do {
-			// Create bot cosmetic definition.
-			BotCosmetic cosmetic;
-			cosmetic.m_DefinitionIndex = kv.GetNum("Index");
-			
-			// Check if cosmetic definition contains attributes.
-			if(kv.JumpToKey("Attributes"))
-			{
-				// If so, create an array list.
-				cosmetic.m_Attributes = new ArrayList(sizeof(TFAttribute));
-
-				// Try going to the first attribute scope.
-				if(kv.GotoFirstSubKey(false))
-				{
-					do {
-						// Read name and float value, add the pair to the attributes array.
-						TFAttribute attrib;
-						kv.GetSectionName(attrib.m_szName, sizeof(attrib.m_szName));
-						attrib.m_flValue = kv.GetFloat(NULL_STRING);
-						cosmetic.m_Attributes.PushArray(attrib);
-
-					} while (kv.GotoNextKey(false))
-
-					kv.GoBack();
-				}
-
-				kv.GoBack();
-			}
-
-			g_hBotCosmetics.PushArray(cosmetic);
-
-		} while (kv.GotoNextKey(false));
-
-		kv.GoBack();
-	}
 }
