@@ -193,7 +193,7 @@ public PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList 
 	TF2Econ_GetItemClassName(item.m_iItemDefinitionIndex, szClassName, sizeof(szClassName));
 	TF2Econ_TranslateWeaponEntForClass(szClassName, sizeof(szClassName), TF2_GetPlayerClass(client));
 
-	Handle hWeapon = TF2Items_CreateItem(OVERRIDE_ALL | FORCE_GENERATION);
+	Handle hWeapon = TF2Items_CreateItem(OVERRIDE_ALL | FORCE_GENERATION | PRESERVE_ATTRIBUTES);
 	TF2Items_SetClassname(hWeapon, szClassName);
 	TF2Items_SetItemIndex(hWeapon, item.m_iItemDefinitionIndex);
 
