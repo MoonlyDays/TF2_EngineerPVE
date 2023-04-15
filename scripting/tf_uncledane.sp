@@ -15,8 +15,8 @@
 /** Maximum amount of players that can be on the server in TF2 */
 #define TF_MAXPLAYERS 			32
 
-#define GOLDEN_PAN_DEFID 1071 
-#define GOLDEN_PAN_CHANCE 1
+#define GOLDEN_PAN_DEFID 		1071 
+#define GOLDEN_PAN_CHANCE 		1
 
 const TFTeam TFTeam_Humans = TFTeam_Blue;
 const TFTeam TFTeam_Bots = TFTeam_Red;
@@ -48,19 +48,21 @@ ArrayList g_hMeleeWeapons;
 
 #include <danepve/config.sp>
 
-#define PLUGIN_VERSION "0.1.1"
+#define PLUGIN_VERSION "0.1.2"
 
 public Plugin myinfo = 
 {
 	name = "[TF2] Uncle Dane PVE",
 	author = "Moonly Days",
 	description = "Uncle Dane PVE",
-	version = "1.0.0",
+	version = PLUGIN_VERSION,
 	url = "https://github.com/MoonlyDays"
 };
 
 // Plugin ConVars
+ConVar sm_danepve_bot_sapper_damage_bonus;
 ConVar sm_danepve_allow_respawnroom_build;
+ConVar sm_danepve_max_humans;
 
 // SDK Call Handles
 Handle g_hSdkEquipWearable;
@@ -80,11 +82,14 @@ public OnPluginStart()
 
 	CreateConVar("danepve_version", PLUGIN_VERSION, "[TF2] Uncle Dane PVE Version", FCVAR_DONTRECORD);
 	sm_danepve_allow_respawnroom_build = CreateConVar("sm_danepve_allow_respawnroom_build", "1", "Can humans build in respawn rooms?");
+	sm_danepve_max_humans = CreateConVar("sm_danepve_max_humans", "12");
 	RegAdminCmd("sm_danepve_reload", cReload, ADMFLAG_CHANGEMAP, "Reloads Uncle Dane PVE config.");
 
 	//
 	// Hook Events
 	HookEvent("post_inventory_application", post_inventory_application);
+	HookEvent("teamplay_setup_finished", 	teamplay_setup_finished);
+	HookEvent("player_death",				player_death);
 	
 	//
 	// Offsets Cache
@@ -129,18 +134,46 @@ public OnMapStart()
 
 public bool OnClientConnect(int client, char[] rejectMsg, int maxlen)
 {
-	if(IsFakeClient(client))
+	if(PVE_GetHumanCount() >= sm_danepve_max_humans.IntValue)
 	{
-		CreateTimer(0.1, Timer_OnBotConnect, client);
+		Format(rejectMsg, maxlen, "[PVE] Server is full.");
+		return false;
 	}
 
 	return true;
 }
 
-public Action Timer_OnBotConnect(Handle timer, any client)
+public int PVE_GetHumanCount()
 {
-	PVE_RenameBotClient(client);
-	TF2_ChangeClientTeam(client, TFTeam_Bots);
+	int count = 0;
+	for(int i = 1; i < MaxClients; i++)
+	{
+        if (IsClientConnected(i) && !IsFakeClient(i))
+            count++;
+	}
+	
+	return count;
+}
+
+public OnClientPutInServer(int client)
+{
+	if(IsClientSourceTV(client))
+		return;
+
+	CreateTimer(0.1, Timer_OnClientConnect, client);
+}
+
+public Action Timer_OnClientConnect(Handle timer, any client)
+{
+	if(IsFakeClient(client))
+	{
+		PVE_RenameBotClient(client);
+		TF2_ChangeClientTeam(client, TFTeam_Bots);
+	}
+	else 
+	{
+		TF2_ChangeClientTeam(client, TFTeam_Humans);
+	}
 
 	return Plugin_Handled;
 }
@@ -181,6 +214,20 @@ public PVE_EquipBotItems(int client)
 	PVE_GiveBotRandomSlotWeaponFromArrayList(client, TFWeaponSlot_Primary, 		g_hPrimaryWeapons);
 	PVE_GiveBotRandomSlotWeaponFromArrayList(client, TFWeaponSlot_Secondary, 	g_hSecondaryWeapons);
 	PVE_GiveBotRandomSlotWeaponFromArrayList(client, TFWeaponSlot_Melee, 		g_hMeleeWeapons);
+
+	for(int i = TFWeaponSlot_Primary; i <= TFWeaponSlot_Melee; i++)
+	{
+		int weapon = GetPlayerWeaponSlot(client, i);
+		if(!IsValidEntity(weapon))
+			continue;
+
+		int specKs = GetRandomInt(2002, 2008);
+		int profKs = GetRandomInt(1, 7);
+
+		TF2Attrib_SetByName(weapon, "killstreak tier", 3.0);
+		TF2Attrib_SetByName(weapon, "killstreak effect", 		float(specKs));
+		TF2Attrib_SetByName(weapon, "killstreak idleeffect", 	float(profKs));
+	}
 }
 
 public PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList array)
@@ -287,6 +334,34 @@ public Action post_inventory_application(Event event, const char[] name, bool do
 	{
 		PVE_EquipBotItems(client);
 		PVE_ApplyPlayerAttributes(client);
+	}
+
+	return Plugin_Continue;
+}
+
+public Action player_death(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(IsFakeClient(client))
+	{
+		CreateTimer(0.1, Timer_RespawnBot, client);
+	}
+
+	return Plugin_Continue;
+}
+
+public Action Timer_RespawnBot(Handle timer, any client)
+{
+	TF2_RespawnPlayer(client);
+	return Plugin_Handled;
+}
+
+public Action teamplay_setup_finished(Event event, const char[] name, bool dontBroadcast)
+{
+	int ent = FindEntityByClassname(-1, "team_round_timer");
+	if(IsValidEntity(ent))
+	{
+		AcceptEntityInput(ent, "Pause");
 	}
 
 	return Plugin_Continue;
