@@ -73,29 +73,27 @@ Handle gHook_HandleSwitchTeams;
 // Offset cache
 int g_nOffset_CBaseEntity_m_iTeamNum;
 
-
 public OnPluginStart()
 {
-	//
+	//-----------------------------------------------------//
 	// Create plugin ConVars
-	//
-
 	CreateConVar("danepve_version", PLUGIN_VERSION, "[TF2] Uncle Dane PVE Version", FCVAR_DONTRECORD);
 	sm_danepve_allow_respawnroom_build = CreateConVar("sm_danepve_allow_respawnroom_build", "1", "Can humans build in respawn rooms?");
 	sm_danepve_max_humans = CreateConVar("sm_danepve_max_humans", "12");
+	sm_danepve_bot_sapper_damage_bonus = CreateConVar("sm_danepve_bot_sapper_damage_bonus", "100");
 	RegAdminCmd("sm_danepve_reload", cReload, ADMFLAG_CHANGEMAP, "Reloads Uncle Dane PVE config.");
 
-	//
+	//-----------------------------------------------------//
 	// Hook Events
 	HookEvent("post_inventory_application", post_inventory_application);
 	HookEvent("teamplay_setup_finished", 	teamplay_setup_finished);
 	HookEvent("player_death",				player_death);
 	
-	//
+	//-----------------------------------------------------//
 	// Offsets Cache
 	g_nOffset_CBaseEntity_m_iTeamNum = FindSendPropInfo("CBaseEntity", "m_iTeamNum");
 
-	//
+	//-----------------------------------------------------//
 	// Prepare SDK calls from Game Data
 	Handle hConf = LoadGameConfigFile("tf2.danepve");
 	StartPrepSDKCall(SDKCall_Player);
@@ -103,10 +101,8 @@ public OnPluginStart()
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
 	g_hSdkEquipWearable = EndPrepSDKCall();
 
-	//
+	//-----------------------------------------------------//
 	// Setup DHook Detours
-	//
-
 	gHook_PointIsWithin = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_Address);
 	DHookSetFromConf(gHook_PointIsWithin, hConf, SDKConf_Signature, "PointIsWithin");
 	DHookAddParam(gHook_PointIsWithin, HookParamType_VectorPtr);
@@ -120,16 +116,22 @@ public OnPluginStart()
 	int offset = GameConfGetOffset(hConf, "CTFGameRules::HandleSwitchTeams");
 	gHook_HandleSwitchTeams = DHookCreate(offset, HookType_GameRules, ReturnType_Void, ThisPointer_Ignore, CTFGameRules_HandleSwitchTeams);
 
-	//
+	//-----------------------------------------------------//
 	// Load config and setup the game
-	//
-
 	Config_Load();
 }
 
 public OnMapStart()
 {
 	DHookGamerules(gHook_HandleSwitchTeams, false);
+}
+
+public OnClientPutInServer(int client)
+{
+	if(IsClientSourceTV(client))
+		return;
+
+	CreateTimer(0.5, Timer_OnClientConnect, client);
 }
 
 public bool OnClientConnect(int client, char[] rejectMsg, int maxlen)
@@ -143,6 +145,19 @@ public bool OnClientConnect(int client, char[] rejectMsg, int maxlen)
 	return true;
 }
 
+public OnEntityCreated(int client, const char[] szClassname)
+{
+	if(StrEqual(szClassname, "obj_attachment_sapper"))
+	{
+		CreateTimer(0.5, Timer_OnSapperSpawn);
+	}
+}
+
+//-------------------------------------------------------//
+// GAMEMODE STOCKS
+//-------------------------------------------------------//
+
+// Return the amount of connected(-ing) human players.
 public int PVE_GetHumanCount()
 {
 	int count = 0;
@@ -155,34 +170,8 @@ public int PVE_GetHumanCount()
 	return count;
 }
 
-public OnClientPutInServer(int client)
-{
-	if(IsClientSourceTV(client))
-		return;
-
-	CreateTimer(0.1, Timer_OnClientConnect, client);
-}
-
-public Action Timer_OnClientConnect(Handle timer, any client)
-{
-	if(IsFakeClient(client))
-	{
-		PVE_RenameBotClient(client);
-		TF2_ChangeClientTeam(client, TFTeam_Bots);
-	}
-	else 
-	{
-		TF2_ChangeClientTeam(client, TFTeam_Humans);
-	}
-
-	return Plugin_Handled;
-}
-
-//-------------------------------------------------------//
-// GAMEMODE STOCKS
-//-------------------------------------------------------//
-
-public PVE_RenameBotClient(int client)
+// Give bot a name from the config
+public void PVE_RenameBotClient(int client)
 {
 	// Figure out the name of the bot.
 	// Make a static variable to store current local name index.
@@ -197,7 +186,8 @@ public PVE_RenameBotClient(int client)
 	SetClientName(client, szName);
 }
 
-public PVE_EquipBotItems(int client)
+// Equip bots with appropriate weapons
+public void PVE_EquipBotItems(int client)
 {
 	for(int i = 0; i < g_hBotCosmetics.Length; i++)
 	{
@@ -230,7 +220,8 @@ public PVE_EquipBotItems(int client)
 	}
 }
 
-public PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList array)
+// Give a bot a random weapon in slot from an array defined in ArrayList 
+public void PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList array)
 {
 	if(array == INVALID_HANDLE)
 		return;
@@ -269,7 +260,8 @@ public PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList 
 	PVE_ApplyBotItemAttributesOnEntity(iWeapon, item);
 }
 
-public PVE_ApplyBotItemAttributesOnEntity(int entity, BotItem item)
+// Apply attributes from config item defintion on entity.
+public void PVE_ApplyBotItemAttributesOnEntity(int entity, BotItem item)
 {
 	if(item.m_Attributes)
 	{
@@ -282,7 +274,8 @@ public PVE_ApplyBotItemAttributesOnEntity(int entity, BotItem item)
 	}
 }
 
-public PVE_ApplyPlayerAttributes(int client)
+// Apply player attributes from config on a given client 
+public void PVE_ApplyPlayerAttributes(int client)
 {
 	for(int i = 0; i < g_hPlayerAttributes.Length; i++)
 	{
@@ -292,7 +285,8 @@ public PVE_ApplyPlayerAttributes(int client)
 	}
 }
 
-int PVE_GiveWearableToClient(int client, int itemDef)
+// Create and give wearable to client with a given item definition
+public int PVE_GiveWearableToClient(int client, int itemDef)
 {
 	int hat = CreateEntityByName("tf_wearable");
 	if(!IsValidEntity(hat))
@@ -312,9 +306,10 @@ int PVE_GiveWearableToClient(int client, int itemDef)
 } 
 
 //-------------------------------------------------------//
-// ConVars
+// Commands
 //-------------------------------------------------------//
 
+// sv_danepve_reload
 public Action cReload(int client, int args)
 {
 	Config_Load();
@@ -323,7 +318,7 @@ public Action cReload(int client, int args)
 }
 
 //-------------------------------------------------------//
-// GAME EVENTS
+// Game Events
 //-------------------------------------------------------//
 
 public Action post_inventory_application(Event event, const char[] name, bool dontBroadcast)
@@ -350,12 +345,6 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast)
 	return Plugin_Continue;
 }
 
-public Action Timer_RespawnBot(Handle timer, any client)
-{
-	TF2_RespawnPlayer(client);
-	return Plugin_Handled;
-}
-
 public Action teamplay_setup_finished(Event event, const char[] name, bool dontBroadcast)
 {
 	int ent = FindEntityByClassname(-1, "team_round_timer");
@@ -367,12 +356,64 @@ public Action teamplay_setup_finished(Event event, const char[] name, bool dontB
 	return Plugin_Continue;
 }
 
-//
-// DHOOK Detours
-//
+//-------------------------------------------------------//
+// TIMERS
+//-------------------------------------------------------//
+
+public Action Timer_OnClientConnect(Handle timer, any client)
+{
+	if(IsFakeClient(client))
+	{
+		// Bots need to be renamed, and force their team to RED.
+		PVE_RenameBotClient(client);
+		TF2_ChangeClientTeam(client, TFTeam_Bots);
+	}
+	else 
+	{
+		// Force human team to blue and show them class limit.
+		TF2_ChangeClientTeam(client, TFTeam_Humans);
+		ShowVGUIPanel(client, "class_blue");
+	}
+
+	return Plugin_Handled;
+}
+
+public Action Timer_RespawnBot(Handle timer, any client)
+{
+	TF2_RespawnPlayer(client);
+	return Plugin_Handled;
+}
+
+public Action Timer_OnSapperSpawn(Handle timer, any sapper)
+{
+	SDKHook(sapper, SDKHook_OnTakeDamage, OnSapperTakeDamage);
+	return Plugin_Handled;
+}
+
+//-------------------------------------------------------//
+// SDK Hooks
+//-------------------------------------------------------//
+public Action OnSapperTakeDamage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
+{
+	if(IsClientInGame(attacker))
+	{
+		if(TF2_GetClientTeam(attacker) == TFTeam_Bots)
+		{
+			damage = sm_danepve_bot_sapper_damage_bonus.FloatValue;
+			return Plugin_Changed;
+		}
+	}
+
+	return Plugin_Handled;
+}
+
+//-------------------------------------------------------//
+// DHook Sapper
+//-------------------------------------------------------//
 
 int g_bAllowNextHumanTeamPointCheck = false;
 
+// CBaseObject::EstimateValidBuildPos
 MRESReturn Detour_EstimateValidBuildPos(Address pThis, Handle hReturn, Handle hParams)
 {
 	if(!sm_danepve_allow_respawnroom_build.BoolValue)
@@ -382,12 +423,14 @@ MRESReturn Detour_EstimateValidBuildPos(Address pThis, Handle hReturn, Handle hP
 	return MRES_Ignored;
 }
 
+// CBaseObject::EstimateValidBuildPos
 MRESReturn Detour_EstimateValidBuildPos_Post(Address pThis, Handle hReturn, Handle hParams)
 {
 	g_bAllowNextHumanTeamPointCheck = false;
 	return MRES_Ignored;
 }
 
+// CBaseTrigger::PointIsWithin
 MRESReturn Detour_OnPointIsWithin(Address pThis, Handle hReturn, Handle hParams)
 {
 	if(g_bAllowNextHumanTeamPointCheck)
