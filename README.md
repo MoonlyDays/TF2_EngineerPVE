@@ -13,7 +13,7 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 ### 0.3.0
 - Round timer is now infinite.
 - Bots insta remove sappers.
-- Changed "fire rate bonus" player stat to +40%
+- Changed "fire rate bonus" wrench stat to +40%
 - Redo unusual effect to Uncle Dane loadout
 
 ### 0.2.1
