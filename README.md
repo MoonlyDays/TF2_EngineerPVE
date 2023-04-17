@@ -14,11 +14,11 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 
 - Introduced the max connected humans limit. (12 by default)
 - Fixed SourceTV being treated as the bot.
-- Increased damage vs. sappers for bots.
 - Bots insta remove sappers.
 - Bots have killstreaks now.
 - Bots respawn immediately.
 - Players are now forced to BLUE team.
+- Round timer is now infinite.
 
 ### 0.1.1
 

@@ -60,7 +60,7 @@ public Plugin myinfo =
 };
 
 // Plugin ConVars
-ConVar sm_danepve_bot_sapper_damage_bonus;
+ConVar sm_danepve_bot_sapper_insta_remove;
 ConVar sm_danepve_allow_respawnroom_build;
 ConVar sm_danepve_max_humans;
 
@@ -80,7 +80,7 @@ public OnPluginStart()
 	CreateConVar("danepve_version", PLUGIN_VERSION, "[TF2] Uncle Dane PVE Version", FCVAR_DONTRECORD);
 	sm_danepve_allow_respawnroom_build = CreateConVar("sm_danepve_allow_respawnroom_build", "1", "Can humans build in respawn rooms?");
 	sm_danepve_max_humans = CreateConVar("sm_danepve_max_humans", "12");
-	sm_danepve_bot_sapper_damage_bonus = CreateConVar("sm_danepve_bot_sapper_damage_bonus", "100");
+	sm_danepve_bot_sapper_insta_remove = CreateConVar("sm_danepve_bot_sapper_insta_remove", "1");
 	RegAdminCmd("sm_danepve_reload", cReload, ADMFLAG_CHANGEMAP, "Reloads Uncle Dane PVE config.");
 
 	//-----------------------------------------------------//
@@ -145,11 +145,11 @@ public bool OnClientConnect(int client, char[] rejectMsg, int maxlen)
 	return true;
 }
 
-public OnEntityCreated(int client, const char[] szClassname)
+public OnEntityCreated(int entity, const char[] szClassname)
 {
 	if(StrEqual(szClassname, "obj_attachment_sapper"))
 	{
-		CreateTimer(0.5, Timer_OnSapperSpawn);
+		SDKHook(entity, SDKHook_OnTakeDamage, OnSapperTakeDamage);
 	}
 }
 
@@ -295,15 +295,24 @@ public int PVE_GiveWearableToClient(int client, int itemDef)
 	SetEntProp(hat, Prop_Send, "m_iItemDefinitionIndex", itemDef);
 	SetEntProp(hat, Prop_Send, "m_bInitialized", 1);
 	SetEntProp(hat, Prop_Send, "m_iEntityLevel", 50);
-	SetEntProp(hat, Prop_Send, "m_iEntityQuality", 6);
 	SetEntProp(hat, Prop_Send, "m_bValidatedAttachedEntity", 1);
 	SetEntProp(hat, Prop_Send, "m_iAccountID", GetSteamAccountID(client));
 	SetEntPropEnt(hat, Prop_Send, "m_hOwnerEntity", client);
-
 	DispatchSpawn(hat);
+	
 	SDKCall(g_hSdkEquipWearable, client, hat);
 	return hat;
 } 
+
+public PVE_FreezeTimer(int timer)
+{
+	int time = 999 * 60;
+	SetVariantInt(time);
+	AcceptEntityInput(timer, "SetMaxTime");
+	SetVariantInt(time);
+	AcceptEntityInput(timer, "SetTime");
+	AcceptEntityInput(timer, "Pause");
+}
 
 //-------------------------------------------------------//
 // Commands
@@ -350,7 +359,7 @@ public Action teamplay_setup_finished(Event event, const char[] name, bool dontB
 	int ent = FindEntityByClassname(-1, "team_round_timer");
 	if(IsValidEntity(ent))
 	{
-		AcceptEntityInput(ent, "Pause");
+		CreateTimer(0.5, Timer_OnSetupFinished, ent);
 	}
 
 	return Plugin_Continue;
@@ -384,9 +393,9 @@ public Action Timer_RespawnBot(Handle timer, any client)
 	return Plugin_Handled;
 }
 
-public Action Timer_OnSapperSpawn(Handle timer, any sapper)
+public Action Timer_OnSetupFinished(Handle timer, any ent)
 {
-	SDKHook(sapper, SDKHook_OnTakeDamage, OnSapperTakeDamage);
+	PVE_FreezeTimer(ent);
 	return Plugin_Handled;
 }
 
@@ -395,11 +404,14 @@ public Action Timer_OnSapperSpawn(Handle timer, any sapper)
 //-------------------------------------------------------//
 public Action OnSapperTakeDamage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
+	if(!sm_danepve_bot_sapper_insta_remove.BoolValue)
+		return Plugin_Handled;
+
 	if(IsClientInGame(attacker))
 	{
 		if(TF2_GetClientTeam(attacker) == TFTeam_Bots)
 		{
-			damage = sm_danepve_bot_sapper_damage_bonus.FloatValue;
+			damage = 9999.0;
 			return Plugin_Changed;
 		}
 	}
