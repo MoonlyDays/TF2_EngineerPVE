@@ -10,17 +10,21 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 
 ## Update History
 
-### 0.1.2
+### 0.3.0
+- Round timer is now infinite.
+- Bots insta remove sappers.
+- Changed "fire rate bonus" player stat to +40%
+- Redo unusual effect to Uncle Dane loadout
+
+### 0.2.1
 
 - Introduced the max connected humans limit. (12 by default)
 - Fixed SourceTV being treated as the bot.
-- Bots insta remove sappers.
 - Bots have killstreaks now.
 - Bots respawn immediately.
 - Players are now forced to BLUE team.
-- Round timer is now infinite.
 
-### 0.1.1
+### 0.2.0
 
 - Bot count now uses tf_bot_quota
 - Added support for weapon customization
