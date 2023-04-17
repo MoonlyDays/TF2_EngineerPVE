@@ -48,7 +48,7 @@ ArrayList g_hMeleeWeapons;
 
 #include <danepve/config.sp>
 
-#define PLUGIN_VERSION "0.1.2"
+#define PLUGIN_VERSION "0.3.0"
 
 public Plugin myinfo = 
 {
