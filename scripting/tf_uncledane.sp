@@ -63,7 +63,8 @@ public Plugin myinfo =
 ConVar sm_danepve_bot_sapper_insta_remove;
 ConVar sm_danepve_respawn_bots_on_round_end;
 ConVar sm_danepve_allow_respawnroom_build;
-ConVar sm_danepve_max_humans;
+ConVar sm_danepve_max_playing_humans;
+ConVar sm_danepve_max_connected_humans;
 
 // SDK Call Handles
 Handle g_hSdkEquipWearable;
@@ -81,7 +82,8 @@ public OnPluginStart()
 	// Create plugin ConVars
 	CreateConVar("danepve_version", PLUGIN_VERSION, "[TF2] Uncle Dane PVE Version", FCVAR_DONTRECORD);
 	sm_danepve_allow_respawnroom_build = CreateConVar("sm_danepve_allow_respawnroom_build", "1", "Can humans build in respawn rooms?");
-	sm_danepve_max_humans = CreateConVar("sm_danepve_max_humans", "12");
+	sm_danepve_max_playing_humans = CreateConVar("sm_danepve_max_playing_humans", "12");
+	sm_danepve_max_connected_humans = CreateConVar("sm_danepve_max_connected_humans", "16");
 	sm_danepve_bot_sapper_insta_remove = CreateConVar("sm_danepve_bot_sapper_insta_remove", "1");
 	sm_danepve_respawn_bots_on_round_end = CreateConVar("sm_danepve_respawn_bots_on_round_end", "0");
 	RegAdminCmd("sm_danepve_reload", cReload, ADMFLAG_CHANGEMAP, "Reloads Uncle Dane PVE config.");
@@ -93,6 +95,7 @@ public OnPluginStart()
 	HookEvent("teamplay_round_win", 		teamplay_round_win);
 	HookEvent("teamplay_setup_finished", 	teamplay_setup_finished);
 	HookEvent("player_death",				player_death);
+	HookEvent("player_spawn",				player_spawn);
 	
 	//-----------------------------------------------------//
 	// Offsets Cache
@@ -120,15 +123,15 @@ public OnPluginStart()
 
 	int offset = GameConfGetOffset(hConf, "CTFGameRules::HandleSwitchTeams");
 	gHook_HandleSwitchTeams = DHookCreate(offset, HookType_GameRules, ReturnType_Void, ThisPointer_Ignore, CTFGameRules_HandleSwitchTeams);
-
-	//-----------------------------------------------------//
-	// Load config and setup the game
-	Config_Load();
 }
 
 public OnMapStart()
 {
 	DHookGamerules(gHook_HandleSwitchTeams, false);
+
+	//-----------------------------------------------------//
+	// Load config and setup the game
+	Config_Load();
 }
 
 public OnClientPutInServer(int client)
@@ -141,7 +144,7 @@ public OnClientPutInServer(int client)
 
 public bool OnClientConnect(int client, char[] rejectMsg, int maxlen)
 {
-	if(PVE_GetHumanCount() >= sm_danepve_max_humans.IntValue)
+	if(PVE_GetHumanCount() >= sm_danepve_max_connected_humans.IntValue)
 	{
 		Format(rejectMsg, maxlen, "[PVE] Server is full.");
 		return false;
@@ -170,6 +173,22 @@ public int PVE_GetHumanCount()
 	{
         if (IsClientConnected(i) && !IsFakeClient(i))
             count++;
+	}
+	
+	return count;
+}
+
+// Return the amount of clients on a given team.
+public int PVE_GetClientCountOnTeam(TFTeam team)
+{
+	int count = 0;
+	for(int i = 1; i < MaxClients; i++)
+	{
+		if(!IsClientInGame(i))
+			continue;
+
+		if (TF2_GetClientTeam(i) == team)
+			count++;
 	}
 	
 	return count;
@@ -366,6 +385,22 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast)
 	{
 		CreateTimer(0.1, Timer_RespawnBot, client);
 	}
+
+	return Plugin_Continue;
+}
+
+public Action player_spawn(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+
+	// Don't do any check for BOTS.
+	if(IsFakeClient(client))
+		return Plugin_Handled;
+		
+	if(PVE_GetClientCountOnTeam(TFTeam_Humans) > sm_danepve_max_playing_humans.IntValue)
+	{
+		TF2_ChangeClientTeam(client, TFTeam_Spectator);
+	} 
 
 	return Plugin_Continue;
 }
