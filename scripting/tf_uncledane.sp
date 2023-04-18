@@ -84,7 +84,6 @@ public OnPluginStart()
 	sm_danepve_allow_respawnroom_build = CreateConVar("sm_danepve_allow_respawnroom_build", "1", "Can humans build in respawn rooms?");
 	sm_danepve_max_playing_humans = CreateConVar("sm_danepve_max_playing_humans", "12");
 	sm_danepve_max_connected_humans = CreateConVar("sm_danepve_max_connected_humans", "16");
-	sm_danepve_max_connected_humans.AddChangeHook(sm_danepve_max_connected_humans__CHANGED);
 	sm_danepve_bot_sapper_insta_remove = CreateConVar("sm_danepve_bot_sapper_insta_remove", "1");
 	sm_danepve_respawn_bots_on_round_end = CreateConVar("sm_danepve_respawn_bots_on_round_end", "0");
 	RegAdminCmd("sm_danepve_reload", cReload, ADMFLAG_CHANGEMAP, "Reloads Uncle Dane PVE config.");
@@ -481,15 +480,6 @@ public Action OnSapperTakeDamage(int victim, int& attacker, int& inflictor, floa
 	}
 
 	return Plugin_Handled;
-}
-
-//-------------------------------------------------------//
-// ConVar Change
-//-------------------------------------------------------//
-
-public void sm_danepve_max_connected_humans__CHANGED(ConVar convar, char[] oldVal, char[] newVal)
-{
-	FindConVar("sv_visiblemaxplayers").SetInt(convar.IntValue);
 }
 
 //-------------------------------------------------------//
