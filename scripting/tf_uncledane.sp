@@ -255,6 +255,7 @@ public void PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, Array
 	array.GetArray(rndInt, item);
 
 	int wepDefId = item.m_iItemDefinitionIndex;
+	bool isGoldenPan = false;
 
 	// Golden Pan Easter Egg!!!
 	if(slot == TFWeaponSlot_Melee)
@@ -264,6 +265,7 @@ public void PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, Array
 			// Bot has 1% chance to have Golden Pan
 			// as their melee.
 			wepDefId = GOLDEN_PAN_DEFID;
+			isGoldenPan = true;
 		}
 	}
 
@@ -277,6 +279,11 @@ public void PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, Array
 
 	int iWeapon = TF2Items_GiveNamedItem(client, hWeapon);
 	delete hWeapon;
+
+	if(isGoldenPan)
+	{
+		TF2Attrib_SetByName(iWeapon, "item style override", 0.0);
+	}
 
 	TF2_RemoveWeaponSlot(client, slot);
 	EquipPlayerWeapon(client, iWeapon);
@@ -330,7 +337,7 @@ public int PVE_GiveWearableToClient(int client, int itemDef)
 
 public PVE_FreezeTimer(int timer)
 {
-	int time = 999 * 60;
+	int time = 999 * 60 + 59;
 	SetVariantInt(time);
 	AcceptEntityInput(timer, "SetMaxTime");
 	SetVariantInt(time);
@@ -439,12 +446,6 @@ public Action Timer_OnClientConnect(Handle timer, any client)
 		// Bots need to be renamed, and force their team to RED.
 		PVE_RenameBotClient(client);
 		TF2_ChangeClientTeam(client, TFTeam_Bots);
-	}
-	else 
-	{
-		// Force human team to blue and show them class limit.
-		TF2_ChangeClientTeam(client, TFTeam_Humans);
-		ShowVGUIPanel(client, "class_blue");
 	}
 
 	return Plugin_Handled;
