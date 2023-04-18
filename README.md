@@ -14,6 +14,7 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 - Added sm_danepve_respawn_bots_on_round_end (default: 0) to stop bots from respawning during round end. 
 - Added sm_danepve_max_playing_humans (default: 12), sm_danepve_max_connected_humans (default: 16).
 - sm_danepve_max_connected_humans affects visible max players.
+- Increased Engineer Bots's max health to 180.
 
 ### 0.3.0
 - Round timer is now infinite.
