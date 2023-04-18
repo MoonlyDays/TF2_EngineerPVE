@@ -144,9 +144,9 @@ public OnClientPutInServer(int client)
 
 public bool OnClientConnect(int client, char[] rejectMsg, int maxlen)
 {
-	if(PVE_GetHumanCount() >= sm_danepve_max_connected_humans.IntValue)
+	if(PVE_GetHumanCount() > sm_danepve_max_connected_humans.IntValue)
 	{
-		Format(rejectMsg, maxlen, "[PVE] Server is full.");
+		Format(rejectMsg, maxlen, "[PVE] Server is full");
 		return false;
 	}
 
