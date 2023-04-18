@@ -8,7 +8,7 @@
 #include <tf_econ_data>
 #include <dhooks>
 
-#define PLUGIN_VERSION "0.4.0"
+#define PLUGIN_VERSION "0.5.0"
 
 /** Display name of the humans team */
 #define PVE_TEAM_HUMANS_NAME 	"blue"
@@ -406,6 +406,7 @@ public Action player_spawn(Event event, const char[] name, bool dontBroadcast)
 		
 	if(PVE_GetClientCountOnTeam(TFTeam_Humans) > sm_danepve_max_playing_humans.IntValue)
 	{
+		PrintCenterText(client, "This gamemode supports %d active players on the BLU team. Please wait for an open slot.", sm_danepve_max_playing_humans.IntValue);
 		TF2_ChangeClientTeam(client, TFTeam_Spectator);
 	} 
 

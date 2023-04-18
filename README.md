@@ -10,6 +10,10 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 
 ## Update History
 
+### 0.5.0
+- Show message when someone tries to join BLUE
+- Fixed some bugs with player limits.
+
 ### 0.4.0
 - Added sm_danepve_respawn_bots_on_round_end (default: 0) to stop bots from respawning during round end. 
 - Added sm_danepve_max_playing_humans (default: 12), sm_danepve_max_connected_humans (default: 16).
