@@ -10,6 +10,9 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 
 ## Update History
 
+### 0.4.0
+- Added sm_danepve_respawn_bots_on_round_end (default: 0) to stop bots from respawning during round end. 
+
 ### 0.3.0
 - Round timer is now infinite.
 - Bots insta remove sappers.

@@ -8,6 +8,8 @@
 #include <tf_econ_data>
 #include <dhooks>
 
+#define PLUGIN_VERSION "0.4.0"
+
 /** Display name of the humans team */
 #define PVE_TEAM_HUMANS_NAME 	"blue"
 /** Internal game index of the bots team */
@@ -48,8 +50,6 @@ ArrayList g_hMeleeWeapons;
 
 #include <danepve/config.sp>
 
-#define PLUGIN_VERSION "0.3.0"
-
 public Plugin myinfo = 
 {
 	name = "[TF2] Uncle Dane PVE",
@@ -61,6 +61,7 @@ public Plugin myinfo =
 
 // Plugin ConVars
 ConVar sm_danepve_bot_sapper_insta_remove;
+ConVar sm_danepve_respawn_bots_on_round_end;
 ConVar sm_danepve_allow_respawnroom_build;
 ConVar sm_danepve_max_humans;
 
@@ -72,6 +73,7 @@ Handle gHook_HandleSwitchTeams;
 
 // Offset cache
 int g_nOffset_CBaseEntity_m_iTeamNum;
+bool g_bIsRoundEnd = false;
 
 public OnPluginStart()
 {
@@ -81,11 +83,14 @@ public OnPluginStart()
 	sm_danepve_allow_respawnroom_build = CreateConVar("sm_danepve_allow_respawnroom_build", "1", "Can humans build in respawn rooms?");
 	sm_danepve_max_humans = CreateConVar("sm_danepve_max_humans", "12");
 	sm_danepve_bot_sapper_insta_remove = CreateConVar("sm_danepve_bot_sapper_insta_remove", "1");
+	sm_danepve_respawn_bots_on_round_end = CreateConVar("sm_danepve_respawn_bots_on_round_end", "0");
 	RegAdminCmd("sm_danepve_reload", cReload, ADMFLAG_CHANGEMAP, "Reloads Uncle Dane PVE config.");
 
 	//-----------------------------------------------------//
 	// Hook Events
 	HookEvent("post_inventory_application", post_inventory_application);
+	HookEvent("teamplay_round_start", 		teamplay_round_start);
+	HookEvent("teamplay_round_win", 		teamplay_round_win);
 	HookEvent("teamplay_setup_finished", 	teamplay_setup_finished);
 	HookEvent("player_death",				player_death);
 	
@@ -345,6 +350,17 @@ public Action post_inventory_application(Event event, const char[] name, bool do
 
 public Action player_death(Event event, const char[] name, bool dontBroadcast)
 {
+	// If we're on round end
+	if(g_bIsRoundEnd)
+	{
+		// And we don't want to respawnw bots during round end.
+		if(!sm_danepve_respawn_bots_on_round_end.BoolValue)
+		{
+			// Bail out.
+			return Plugin_Handled;
+		}
+	}
+
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(IsFakeClient(client))
 	{
@@ -362,6 +378,18 @@ public Action teamplay_setup_finished(Event event, const char[] name, bool dontB
 		CreateTimer(0.5, Timer_OnSetupFinished, ent);
 	}
 
+	return Plugin_Continue;
+}
+
+public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast)
+{
+	g_bIsRoundEnd = true;
+	return Plugin_Continue;
+}
+
+public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast)
+{
+	g_bIsRoundEnd = false;
 	return Plugin_Continue;
 }
 
