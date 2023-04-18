@@ -169,7 +169,7 @@ public OnEntityCreated(int entity, const char[] szClassname)
 public int PVE_GetHumanCount()
 {
 	int count = 0;
-	for(int i = 1; i < MaxClients; i++)
+	for(int i = 1; i <= MaxClients; i++)
 	{
         if (IsClientConnected(i) && !IsFakeClient(i))
             count++;
@@ -182,7 +182,7 @@ public int PVE_GetHumanCount()
 public int PVE_GetClientCountOnTeam(TFTeam team)
 {
 	int count = 0;
-	for(int i = 1; i < MaxClients; i++)
+	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(!IsClientInGame(i))
 			continue;
