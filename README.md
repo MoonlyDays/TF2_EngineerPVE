@@ -15,6 +15,7 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 - Round timer is now a stopwatch that shows how much has passed during a round.
 - Delete edict entities that appear from dying engineers during round end.
 - Engineer health is 185.
+- Added sm_becomedanebot command. (Exclusive to Uncle Dane :O)
 
 ### 0.5.0
 - Show message when someone tries to join BLUE
