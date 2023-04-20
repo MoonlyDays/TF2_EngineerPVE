@@ -10,6 +10,9 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 
 ## Update History
 
+### 0.6.1
+- Use our own system for forced team joins.
+
 ### 0.6.0
 - Attempt to ensure that players are only on the team that they are allowed to be on.
 - Round timer is now a stopwatch that shows how much has passed during a round.
