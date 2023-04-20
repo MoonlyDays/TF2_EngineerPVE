@@ -2,11 +2,33 @@
 
 A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE team consisting of up to 12 human players is faced with an army of Engineer Bots on RED team. The goal of the gamemode is to fight through the defenses of the Engineer bots and win the round. Best played on Payload and A/D maps.  
 
+## ConVars
+- `sm_danepve_allow_respawnroom_build` (default: 1) - allows human engineers to build in spawnrooms.
+- `sm_danepve_max_playing_humans` (default: 12) - maximum amount of humans that are allowed to be playing at the same time.
+- `sm_danepve_max_connected_humans` (default: 16) - maximum amount of humans that are allowed to connect.
+- `sm_danepve_bot_sapper_insta_remove` (default: 1) - will engineer bots insta remove all sappers with one Wrench swing?
+- `sm_danepve_respawn_bots_on_round_end` (default: 0) - will engineer bots respawn on round end?
+
+## Commands
+- `sm_danepve_reload` - Reloads the Config
+- `sm_becomedanebot` - 🤫
+
 ## Requires
 
 - TF2Attributes (https://github.com/FlaminSarge/tf2attributes)
 - TF2 Econ Data (https://github.com/nosoop/SM-TFEconData)
 - TF2Items (https://github.com/asherkin/TF2Items)
+
+## Configuratuin
+Plugin is configured inside the `configs/danepve.cfg` directory. 
+|Key|Description|
+|---|-----------|
+|Names|A list of names bots will use|
+|Count|Amount of bots to fill the RED team with|
+|Difficulty|Desired `tf_bot_difficulty` value|
+|Attributes|TF2 attributes applied on the player itself|
+|Weapons|A list of weapons that bots will use, defined as a list of items per slot. Upon spawn, bots will pick a random one for each slot|
+|Cosmetics|A list of cosmetics equipped on the bots|
 
 ## Update History
 
