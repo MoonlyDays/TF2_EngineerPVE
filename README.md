@@ -10,6 +10,9 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 
 ## Update History
 
+### 0.6.2
+- Also remove halloween souls packs.
+
 ### 0.6.1
 - Use our own system for forced team joins.
 

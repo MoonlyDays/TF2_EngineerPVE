@@ -8,7 +8,7 @@
 #include <tf_econ_data>
 #include <dhooks>
 
-#define PLUGIN_VERSION "0.6.1"
+#define PLUGIN_VERSION "0.6.2"
 
 /** Display name of the humans team */
 #define PVE_TEAM_HUMANS_NAME 	"blue"
@@ -178,6 +178,12 @@ public OnEntityCreated(int entity, const char[] szClassname)
 		{
 			AcceptEntityInput(entity, "Kill");
 		}
+	}
+
+	// No halloween allowed >:C
+	if(StrEqual(szClassname, "halloween_souls_pack"))
+	{
+		AcceptEntityInput(entity, "Kill");
 	}
 
 	if(StrEqual(szClassname, "obj_attachment_sapper"))
