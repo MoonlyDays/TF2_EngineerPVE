@@ -32,6 +32,10 @@ Plugin is configured inside the `configs/danepve.cfg` directory.
 
 ## Update History
 
+### 0.7.0
+- Added `sm_danepve_clear_bots_building_gibs` to clear gibs from building to prevent server crashes.
+- Stopped spawning gibs for some time when bots are in the joining phase and dying a lot.
+
 ### 0.6.2
 - Also remove halloween souls packs.
 
