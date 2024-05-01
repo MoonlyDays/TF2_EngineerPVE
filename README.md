@@ -1,4 +1,4 @@
-# One Thousand Uncles
+# One Thousand Engineers
 
 A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE team consisting of up to 12 human players is faced with an army of Engineer Bots on RED team. The goal of the gamemode is to fight through the defenses of the Engineer bots and win the round. Best played on Payload and A/D maps.  
 
