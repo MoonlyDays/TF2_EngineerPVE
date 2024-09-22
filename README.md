@@ -36,6 +36,8 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 - Added `sm_engipve_clear_gibs` (default: 1) to fully delete all building and player gibs.
 - Changed variables' and commands' prefix to `sm_engipve` (from `sm_danepve`).
 - Some cosmetic map entities are automatically deleted to cleanup edicts.
+- Changed the name of the config from (`danepve.cfg` to `tf_engipve.cfg`)
+- Changed the name of the game data file from (`tf2.danepve.txt` to `tf2.engipve.txt`)
 
 ### 0.7.1
 - Added fail states if gamedata was setup incorrectly.
