@@ -32,7 +32,7 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 ## Update History
 
 ### 0.8.0
-- Remove console variables for limiting connected clients. Maximum amount of clients is now calculated with (maxplayers - tf_bot_quota)
+- Removed console variables for limiting connected clients. Maximum amount of clients is now calculated with (maxplayers - tf_bot_quota)
 - Added `sm_engipve_clear_gibs` (default: 1) to fully delete all building and player gibs.
 - Changed variables' and commands' prefix to `sm_engipve` (from `sm_danepve`).
 - Some cosmetic map entities are automatically deleted to cleanup edicts.
