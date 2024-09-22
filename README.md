@@ -19,7 +19,7 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 - TF2Items (https://github.com/asherkin/TF2Items)
 
 ## Configuratuin
-Plugin is configured inside the `configs/danepve.cfg` directory. 
+Plugin is configured inside the `configs/tf_engipve.cfg` directory. 
 |Key|Description|
 |---|-----------|
 |Names|A list of names bots will use|
@@ -33,7 +33,9 @@ Plugin is configured inside the `configs/danepve.cfg` directory.
 
 ### 0.8.0
 - Remove console variables for limiting connected clients. Maximum amount of clients is now calculated with (maxplayers - tf_bot_quota)
-- Added `sm_engipve_clear_gibs` to fully delete all building and player gibs.
+- Added `sm_engipve_clear_gibs` (default: 1) to fully delete all building and player gibs.
+- Changed variables' and commands' prefix to `sm_engipve` (from `sm_danepve`).
+- Some cosmetic map entities are automatically deleted to cleanup edicts.
 
 ### 0.7.1
 - Added fail states if gamedata was setup incorrectly.
@@ -53,22 +55,22 @@ Plugin is configured inside the `configs/danepve.cfg` directory.
 - Round timer is now a stopwatch that shows how much has passed during a round.
 - Delete edict entities that appear from dying engineers during round end.
 - Engineer health is 185.
-- Added sm_becomedanebot command. (Exclusive to Uncle Dane :O)
+- Added `sm_becomedanebot` command. (Exclusive to Uncle Dane :O)
 
 ### 0.5.0
 - Show message when someone tries to join BLUE
 - Fixed some bugs with player limits.
 
 ### 0.4.0
-- Added sm_danepve_respawn_bots_on_round_end (default: 0) to stop bots from respawning during round end. 
-- Added sm_danepve_max_playing_humans (default: 12), sm_danepve_max_connected_humans (default: 16).
-- sm_danepve_max_connected_humans affects visible max players.
+- Added `sm_danepve_respawn_bots_on_round_end` (default: 0) to stop bots from respawning during round end. 
+- Added `sm_danepve_max_playing_humans` (default: 12), `sm_danepve_max_connected_humans` (default: 16).
+- `sm_danepve_max_connected_humans` affects visible max players.
 - Increased Engineer Bots's max health to 180.
 
 ### 0.3.0
 - Round timer is now infinite.
 - Bots insta remove sappers.
-- Changed "fire rate bonus" wrench stat to +40%
+- Changed `fire rate bonus` wrench stat to +40%
 - Redo unusual effect to Uncle Dane loadout
 
 ### 0.2.1
@@ -81,7 +83,7 @@ Plugin is configured inside the `configs/danepve.cfg` directory.
 
 ### 0.2.0
 
-- Bot count now uses tf_bot_quota
+- Bot count now uses `tf_bot_quota`
 - Added support for weapon customization
 - Golden Pan Easter Egg!
 - Switch teams is disabled.
