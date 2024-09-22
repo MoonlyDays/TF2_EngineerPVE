@@ -33,6 +33,10 @@ Plugin is configured inside the `configs/danepve.cfg` directory.
 
 ## Update History
 
+### 0.8.0
+- Remove console variables for limiting connected clients. Maximum amount of clients is now calculated with (maxplayers - tf_bot_quota)
+- Added `sm_engipve_clear_gibs` to fully delete all building and player gibs.
+
 ### 0.7.1
 - Added fail states if gamedata was setup incorrectly.
 
