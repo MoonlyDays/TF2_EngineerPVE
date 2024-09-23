@@ -31,6 +31,10 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 
 ## Update History
 
+### 0.8.2
+- Ragdolls are only deleted for Bots team.
+- Fixed signatures one final time (hopefully.)
+
 ### 0.8.1
 - Fixed server crash when the first engineer has joined the game.
 - Fixed incorrect gamedata.
