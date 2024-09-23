@@ -564,9 +564,14 @@ void PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList ar
 	int iWeapon = TF2Items_GiveNamedItem(client, hWeapon);
 	delete hWeapon;
 
-	if(isGoldenPan)
-	{
+	if(isGoldenPan) {
 		TF2Attrib_SetByName(iWeapon, "item style override", 0.0);
+	}
+
+	int prevWeapon = GetPlayerWeaponSlot(client, slot);
+	if(prevWeapon != -1) {
+		int accountId = GetEntProp(prevWeapon, Prop_Send, "m_iAccountID");
+		SetEntProp(iWeapon, Prop_Send, "m_iAccountID", accountId);
 	}
 
 	TF2_RemoveWeaponSlot(client, slot);

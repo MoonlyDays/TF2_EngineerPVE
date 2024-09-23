@@ -31,6 +31,9 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 
 ## Update History
 
+### 0.8.4
+- Fixed bots dropping weapons when they reach resupply lockers.
+
 ### 0.8.3
 - Engineer bots can't build teleporters.
 
