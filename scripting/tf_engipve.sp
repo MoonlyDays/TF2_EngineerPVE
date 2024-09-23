@@ -90,7 +90,8 @@ char g_szCleanupEntities[][] = {
 	"func_dustmotes",
 	"point_spotlight",
 	"env_smoketrail",
-	"env_sun"
+	"env_sun",
+	"halloween_souls_pack"
 }
 
 public OnPluginStart()
