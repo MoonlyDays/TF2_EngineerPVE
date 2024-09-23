@@ -31,6 +31,12 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 
 ## Update History
 
+### 0.8.1
+- Fixed server crash when the first engineer has joined the game.
+- Fixed incorrect gamedata.
+- Added "Uncle Frames" to the list of names.
+- Added Pomson to the list of Primary weapons. (TODO: make it have 10% chance to appear)
+
 ### 0.8.0
 - Removed console variables for limiting connected clients. Maximum amount of clients is now calculated with (maxplayers - tf_bot_quota)
 - Added `sm_engipve_clear_gibs` (default: 1) to fully delete all building and player gibs.
