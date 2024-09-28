@@ -7,6 +7,7 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 - `sm_engipve_bot_sapper_insta_remove` (default: 1) - will engineer bots insta remove all sappers with one Wrench swing?
 - `sm_engipve_respawn_bots_on_round_end` (default: 0) - will engineer bots respawn on round end?
 - `sm_engipve_clear_bots_building_gibs` (default: 1) - don't spawn bots building gibs
+- `sm_engipve_spy_capblock_time` (default: 20) - how much time spies are not allowed to  
 
 ## Commands
 - `sm_engipve_reload` - Reloads the Config
@@ -30,6 +31,10 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 |Cosmetics|A list of cosmetics equipped on the bots|
 
 ## Update History
+
+### 0.8.5
+- Added `sm_engipve_spy_capblock_time` for blocking spy capture for some time after control points capture.
+- Fixed people sometimes getting stuck in Spectator.
 
 ### 0.8.4
 - Fixed bots dropping weapons when they reach resupply lockers.
