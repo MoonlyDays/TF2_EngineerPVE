@@ -11,7 +11,7 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 
 ## Commands
 - `sm_engipve_reload` - Reloads the Config
-- `sm_becomedanebot` - 🤫
+- `sm_becomeengibot` - 🤫
 
 ## Requires
 
