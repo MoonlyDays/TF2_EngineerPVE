@@ -32,6 +32,9 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 
 ## Update History
 
+### 0.8.6
+- Spy cap blocking feature doesn't apply in Payload mode.
+
 ### 0.8.5
 - Added `sm_engipve_spy_capblock_time` for blocking spy capture for some time after control points capture.
 - Fixed people sometimes getting stuck in Spectator.
