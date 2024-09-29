@@ -6,8 +6,8 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 - `sm_engipve_allow_respawnroom_build` (default: 1) - allows human engineers to build in spawnrooms.
 - `sm_engipve_bot_sapper_insta_remove` (default: 1) - will engineer bots insta remove all sappers with one Wrench swing?
 - `sm_engipve_respawn_bots_on_round_end` (default: 0) - will engineer bots respawn on round end?
-- `sm_engipve_clear_bots_building_gibs` (default: 1) - don't spawn bots building gibs
-- `sm_engipve_spy_capblock_time` (default: 20) - how much time spies are not allowed to  
+- `sm_engipve_clear_bots_building_gibs` (default: 1) - don't spawn bots building gibs.
+- `sm_engipve_spy_capblock_time` (default: 20) - how much time spies are not allowed to capture points after the previous capture.
 
 ## Commands
 - `sm_engipve_reload` - Reloads the Config
