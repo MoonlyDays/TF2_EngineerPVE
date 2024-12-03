@@ -18,6 +18,7 @@ A special PVE gamemode designed by Uncle Dane for Uncletopia servers. The BLUE t
 - TF2Attributes (https://github.com/FlaminSarge/tf2attributes)
 - TF2 Econ Data (https://github.com/nosoop/SM-TFEconData)
 - TF2Items (https://github.com/asherkin/TF2Items)
+- SourceScramble (https://github.com/nosoop/SMExt-SourceScramble)
 
 ## Configuratuin
 Plugin is configured inside the `configs/tf_engipve.cfg` directory. 
