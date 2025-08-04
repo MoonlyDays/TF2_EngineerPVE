@@ -935,11 +935,6 @@ public void OnFlagSpawned(int flag)
 	}
 }
 
-bool EnableMemoryPatch(MemoryPatch patch)
-{
-	return patch.Validate() && patch.Enable();
-}
-
 //-------------------------------------------------------//
 // DHook
 //-------------------------------------------------------//
