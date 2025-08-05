@@ -85,6 +85,11 @@ DynamicDetour g_DetourCreateObjectGibs;
 DynamicDetour g_DetourDropAmmoPack;
 DynamicDetour g_DetourCreateRagdollEntity;
 
+//-----------------------------------------------------//
+// Memory Patches
+//-----------------------------------------------------//
+MemoryPatch   m_Patch;
+
 int			  g_nOffset_CBaseEntity_m_iTeamNum;
 
 // Reference to the team_round_timer entity to modify its' time value.
@@ -182,7 +187,9 @@ public OnPluginStart()
 	//-----------------------------------------------------//
 	// PATCHES
 	//-----------------------------------------------------//
-	if (!EnableMemoryPatch(MemoryPatch.CreateFromConf(conf, "CTFBotEngineerBuild::InitialContainedAction::PatchSkipPVECheck")))
+	m_Patch = MemoryPatch.CreateFromConf(conf, "CTFBotEngineerBuild::InitialContainedAction::PatchSkipPVECheck")
+	
+	if (!m_Patch.Validate())
 	{
 		SetFailState("Failed to enable CTFBotEngineerBuild::InitialContainedAction::PatchSkipPVECheck memory patch");
 	}
@@ -207,6 +214,24 @@ public void OnConfigsExecuted()
 public OnMapStart()
 {
 	g_HookHandleSwitchTeams.HookGamerules(Hook_Pre, CTFGameRules_HandleSwitchTeams);
+
+	g_bIsRoundActive = false;
+
+	char sMapName[PLATFORM_MAX_PATH];
+	GetCurrentMap(sMapName, sizeof(sMapName));
+
+	if (strncmp(sMapName, "pl_", 3, false) == 0 || strncmp(sMapName, "cp_", 3, false) == 0)
+	{
+		m_Patch.Disable();
+
+		LogMessage("TF_ENGIPVE patch Disabled!"); // Verify Patch is disabled in console
+	}
+	else
+	{
+		m_Patch.Enable();
+
+		LogMessage("TF_ENGIPVE patch Enabled!"); // Verify Patch is enabled in console
+	}
 }
 
 public OnClientPutInServer(int client)
@@ -303,6 +328,7 @@ void Config_Load()
 	FindConVar("tf_bot_force_class").SetString(szClassName);
 	FindConVar("tf_bot_auto_vacate").SetBool(false);
 	FindConVar("tf_bot_quota").SetInt(kv.GetNum("Count"));
+	FindConVar("tf_bot_difficulty").SetInt(kv.GetNum("Difficulty"));
 	FindConVar("mp_disable_respawn_times").SetBool(true);
 	FindConVar("mp_teams_unbalance_limit").SetInt(0);
 }
@@ -907,11 +933,6 @@ public void OnFlagSpawned(int flag)
 	{
 		AcceptEntityInput(flag, "Kill");
 	}
-}
-
-bool EnableMemoryPatch(MemoryPatch patch)
-{
-	return patch.Validate() && patch.Enable();
 }
 
 //-------------------------------------------------------//
