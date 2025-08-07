@@ -33,6 +33,9 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 
 ## Update History
 
+### 0.9.0
+- Removed CTF related experimental patches
+
 ### 0.8.6
 - Spy cap blocking feature doesn't apply in Payload mode.
 

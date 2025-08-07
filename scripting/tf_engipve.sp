@@ -6,7 +6,6 @@
 #include <tf2_stocks>
 #include <tf2items>
 #include <tf_econ_data>
-#include <sourcescramble>
 #include <dhooks>
 
 #define PLUGIN_VERSION       "0.9.0"
@@ -88,8 +87,6 @@ DynamicDetour g_DetourCreateRagdollEntity;
 //-----------------------------------------------------//
 // Memory Patches
 //-----------------------------------------------------//
-MemoryPatch   g_PatchSkipPVECheck;
-
 int           g_nOffset_CBaseEntity_m_iTeamNum;
 
 // Reference to the team_round_timer entity to modify its' time value.
@@ -185,15 +182,6 @@ public OnPluginStart()
     g_DetourCreateRagdollEntity.Enable(Hook_Pre, Detour_CreateRagdollEntity);
 
     //-----------------------------------------------------//
-    // PATCHES
-    //-----------------------------------------------------//
-    g_PatchSkipPVECheck = MemoryPatch.CreateFromConf(conf, "CTFBotEngineerBuild::InitialContainedAction::PatchSkipPVECheck");
-    if (!g_PatchSkipPVECheck.Validate())
-    {
-        SetFailState("Failed to enable CTFBotEngineerBuild::InitialContainedAction::PatchSkipPVECheck memory patch");
-    }
-
-    //-----------------------------------------------------//
     // COMMANDS
     //-----------------------------------------------------//
     RegAdminCmd("sm_engipve_reload", cReload, ADMFLAG_CHANGEMAP, "Reloads Engineer PVE config.");
@@ -215,20 +203,6 @@ public OnMapStart()
     g_HookHandleSwitchTeams.HookGamerules(Hook_Pre, CTFGameRules_HandleSwitchTeams);
 
     g_bIsRoundActive = false;
-
-    char sMapName[PLATFORM_MAX_PATH];
-    GetCurrentMap(sMapName, sizeof(sMapName));
-
-    if (strncmp(sMapName, "pl_", 3, false) == 0 || strncmp(sMapName, "cp_", 3, false) == 0)
-    {
-        g_PatchSkipPVECheck.Disable();
-        LogMessage("TF_ENGIPVE patch Disabled!");    // Verify Patch is disabled in console
-    }
-    else
-    {
-        g_PatchSkipPVECheck.Enable();
-        LogMessage("TF_ENGIPVE patch Enabled!");    // Verify Patch is enabled in console
-    }
 }
 
 public OnClientPutInServer(int client)
@@ -534,8 +508,9 @@ void PVE_EquipBotItems(int client)
         g_hBotCosmetics.GetArray(i, cosmetic);
 
         int hat = PVE_GiveWearableToClient(client, cosmetic.m_iItemDefinitionIndex);
-        if (hat <= 0)
+        if (hat <= 0) {
             continue;
+        }
 
         PVE_ApplyBotItemAttributesOnEntity(hat, cosmetic);
     }
@@ -644,8 +619,9 @@ void PVE_ApplyPlayerAttributes(int client)
 int PVE_GiveWearableToClient(int client, int itemDef)
 {
     int hat = CreateEntityByName("tf_wearable");
-    if (!IsValidEntity(hat))
+    if (!IsValidEntity(hat)) {
         return -1;
+    }
 
     SetEntProp(hat, Prop_Send, "m_iItemDefinitionIndex", itemDef);
     SetEntProp(hat, Prop_Send, "m_bInitialized", 1);
@@ -654,6 +630,7 @@ int PVE_GiveWearableToClient(int client, int itemDef)
     SetEntProp(hat, Prop_Send, "m_iAccountID", GetSteamAccountID(client));
     SetEntPropEnt(hat, Prop_Send, "m_hOwnerEntity", client);
     DispatchSpawn(hat);
+    ActivateEntity(hat);
 
     SDKCall(g_SdkEquipWearable, client, hat);
     return hat;
@@ -915,16 +892,6 @@ public Action OnSapperTakeDamage(int victim, int& attacker, int& inflictor, floa
     }
 
     return Plugin_Handled;
-}
-
-public void OnFlagSpawned(int flag)
-{
-    // Destroy the humans' team flag.
-    TFTeam team = view_as<TFTeam>(GetEntProp(flag, Prop_Send, "m_iTeamNum"));
-    if (team == TFTeam_Humans)
-    {
-        AcceptEntityInput(flag, "Kill");
-    }
 }
 
 //-------------------------------------------------------//
