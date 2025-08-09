@@ -6,7 +6,6 @@
 #include <tf2_stocks>
 #include <tf2items>
 #include <tf_econ_data>
-#include <sourcescramble>
 #include <dhooks>
 
 #define PLUGIN_VERSION       "0.9.1"
