@@ -937,6 +937,16 @@ public Action OnSapperTakeDamage(int victim, int& attacker, int& inflictor, floa
     return Plugin_Handled;
 }
 
+public void OnFlagSpawned(int flag)
+{
+	// Destroy the humans' team flag.
+	TFTeam team = view_as<TFTeam>(GetEntProp(flag, Prop_Send, "m_iTeamNum"));
+	if (team == TFTeam_Humans)
+	{
+		AcceptEntityInput(flag, "Kill");
+	}
+}
+
 //-------------------------------------------------------//
 // DHook
 //-------------------------------------------------------//
