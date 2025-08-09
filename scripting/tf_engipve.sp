@@ -14,8 +14,6 @@
 #define PVE_TEAM_HUMANS_NAME "blue"
 #define PVE_TEAM_BOTS_NAME   "red"
 
-#define UNCLE_DANE_STEAMID   "STEAM_0:0:48866904"
-
 #define MAX_COSMETIC_ATTRS   8
 #define GIBS_CLEANUP_PERIOD  10.0
 
@@ -89,6 +87,7 @@ DynamicDetour g_DetourComputeIncursionDistance;
 //-----------------------------------------------------//
 // Memory Patches
 //-----------------------------------------------------//
+MemoryPatch   m_Patch;
 
 int           g_nOffset_CBaseEntity_m_iTeamNum;
 
@@ -188,6 +187,16 @@ public OnPluginStart()
     g_DetourComputeIncursionDistance.Enable(Hook_Pre, CTFNavMesh_ComputeIncursionDistance);
     g_DetourComputeIncursionDistance.Enable(Hook_Post, CTFNavMesh_ComputeIncursionDistance_Post);
 
+	//-----------------------------------------------------//
+	//PATCHES
+	//-----------------------------------------------------//
+	m_Patch = MemoryPatch.CreateFromConf(conf, "CTFBotEngineerBuild::InitialContainedAction::PatchSkipPVECheck")
+	
+	if (!m_Patch.Validate())
+	{
+		SetFailState("Failed to enable CTFBotEngineerBuild::InitialContainedAction::PatchSkipPVECheck memory patch");
+	}
+
     //-----------------------------------------------------//
     // COMMANDS
     //-----------------------------------------------------//
@@ -208,10 +217,23 @@ public void OnConfigsExecuted()
 public OnMapStart()
 {
     g_HookHandleSwitchTeams.HookGamerules(Hook_Pre, CTFGameRules_HandleSwitchTeams);
-    g_bIsRoundActive = false;
+	g_bIsRoundActive = false;
 
-    char szMap[32];
-    GetCurrentMap(szMap, sizeof(szMap));
+	char sMapName[PLATFORM_MAX_PATH];
+	GetCurrentMap(sMapName, sizeof(sMapName));
+
+	if (strncmp(sMapName, "pl_", 3, false) == 0 || strncmp(sMapName, "cp_", 3, false) == 0)
+	{
+		m_Patch.Disable();
+
+		LogMessage("TF_ENGIPVE patch Disabled!"); // Debugging
+	}
+	else
+	{
+		m_Patch.Enable();
+
+		LogMessage("TF_ENGIPVE patch Enabled!"); // Debugging
+	}
 }
 
 public OnClientPutInServer(int client)
@@ -249,6 +271,11 @@ public OnEntityCreated(int entity, const char[] szClassname)
     {
         SDKHook(entity, SDKHook_OnTakeDamage, OnSapperTakeDamage);
     }
+
+	if (StrEqual(szClassname, "item_teamflag"))
+	{
+		RequestFrame(OnFlagSpawned, entity);
+	}
 }
 
 //-------------------------------------------------------//
