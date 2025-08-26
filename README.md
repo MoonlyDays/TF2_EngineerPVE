@@ -32,6 +32,9 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 
 ## Update History
 
+### 0.9.1
+- Potential fix for Enclosure map
+
 ### 0.9.0
 - Removed CTF related experimental patches
 
