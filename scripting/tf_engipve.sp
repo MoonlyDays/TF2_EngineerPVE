@@ -709,6 +709,47 @@ void PVE_EnableCapture(int client)
     TF2Attrib_RemoveByName(client, "increase player capture value");
 }
 
+stock int TF2_FindNoiseMaker(int client)
+{
+	int iEntity = MaxClients + 1;
+	while ((iEntity = FindEntityByClassname(iEntity, "tf_wearable")) > MaxClients)
+	{
+		if (GetEntPropEnt(iEntity, Prop_Send, "m_hOwnerEntity") == client)
+		{
+			if (TF2_WeaponFindAttribute(iEntity, 196) > 0.0)
+			{
+				return iEntity;
+			}
+		}
+	}
+	
+	return -1;
+}
+
+stock float TF2_WeaponFindAttribute(int iWeapon, int iAttrib)
+{
+	Address addAttrib = TF2Attrib_GetByDefIndex(iWeapon, iAttrib);
+	if (addAttrib == Address_Null)
+	{
+		int iItemDefIndex = GetEntProp(iWeapon, Prop_Send, "m_iItemDefinitionIndex");
+		int iAttributes[16];
+		float flAttribValues[16];
+		
+		int iMaxAttrib = TF2Attrib_GetStaticAttribs(iItemDefIndex, iAttributes, flAttribValues);
+		for (int i = 0; i < iMaxAttrib; i++)
+		{
+			if (iAttributes[i] == iAttrib)
+			{
+				return flAttribValues[i];
+			}
+		}
+		
+		return 0.0;
+	}
+	
+	return TF2Attrib_GetValue(addAttrib);
+}
+
 //-------------------------------------------------------//
 // Commands
 //-------------------------------------------------------//
@@ -774,6 +815,23 @@ public Action post_inventory_application(Event event, const char[] name, bool do
     }
 
     return Plugin_Continue;
+}
+
+public Action OnClientCommandKeyValues(int client, KeyValues KeyValue)
+{
+	char sName[64];
+	KeyValue.GetSectionName(sName, sizeof(sName));
+	
+    if (strcmp(sName, "use_action_slot_item_server") == 0)
+	{
+		int Item = TF2_FindNoiseMaker(client);
+        if (Item > MaxClients)
+		{
+			return Plugin_Handled;
+		}
+	}
+	
+	return Plugin_Continue;
 }
 
 public Action player_death(Event event, const char[] name, bool dontBroadcast)
