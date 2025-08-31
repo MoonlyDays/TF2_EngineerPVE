@@ -8,7 +8,7 @@
 #include <tf_econ_data>
 #include <dhooks>
 
-#define PLUGIN_VERSION       "0.9.1"
+#define PLUGIN_VERSION       "0.9.2"
 
 #define PVE_TEAM_HUMANS_NAME "blue"
 #define PVE_TEAM_BOTS_NAME   "red"
@@ -51,6 +51,10 @@ enum struct BotItem
     char      m_szClassName[32];
     ArrayList m_Attributes;
 }
+//-----------------------------------------------------//
+// Timers
+//-----------------------------------------------------//
+Handle        g_TimerDisableCapBlocking;
 
 //-----------------------------------------------------//
 // List of Definitions
@@ -216,7 +220,9 @@ public OnMapStart()
 public OnClientPutInServer(int client)
 {
     if (IsClientSourceTV(client))
+    {
         return;
+    }
 
     CreateTimer(0.1, Timer_OnClientConnect, client);
 }
@@ -479,20 +485,39 @@ void Config_DisposeOfBotItemArrayList(ArrayList array)
 // GAMEMODE STOCKS
 //-------------------------------------------------------//
 
-// Return the amount of connected(-ing) human players.
+bool PVE_IsHumanClient(int client)
+{
+    return IsValidClient(client)
+        && !IsFakeClient(client);
+}
+
+bool PVE_IsBotClient(int client)
+{
+    return IsValidClient(client)
+        && IsFakeClient(client)
+        && !IsClientSourceTV(client);
+}
+
+/**
+ * Return the amount of connected(-ing) human players.
+ */
 int PVE_GetHumanCount()
 {
     int count = 0;
     for (int i = 1; i <= MaxClients; i++)
     {
-        if (IsClientConnected(i) && !IsFakeClient(i))
+        if (PVE_IsHumanClient(i))
+        {
             count++;
+        }
     }
 
     return count;
 }
 
-// Give bot a name from the config
+/**
+ * Give bot a name from the config
+ */
 void PVE_RenameBotClient(int client)
 {
     // Figure out the name of the bot.
@@ -508,7 +533,9 @@ void PVE_RenameBotClient(int client)
     SetClientName(client, szName);
 }
 
-// Equip bots with appropriate weapons
+/**
+ * Equip bots with appropriate weapons
+ */
 void PVE_EquipBotItems(int client)
 {
     for (int i = 0; i < g_hBotCosmetics.Length; i++)
@@ -544,7 +571,9 @@ void PVE_EquipBotItems(int client)
     }
 }
 
-// Give a bot a random weapon in slot from an array defined in ArrayList
+/**
+ * Give a bot a random weapon in slot from an array defined in ArrayList
+ */
 void PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList array)
 {
     if (array == INVALID_HANDLE)
@@ -600,7 +629,9 @@ void PVE_GiveBotRandomSlotWeaponFromArrayList(int client, int slot, ArrayList ar
     PVE_ApplyBotItemAttributesOnEntity(iWeapon, item);
 }
 
-// Apply attributes from config item defintion on entity.
+/**
+ * Apply attributes from config item defintion on entity.
+ */
 void PVE_ApplyBotItemAttributesOnEntity(int entity, BotItem item)
 {
     if (item.m_Attributes)
@@ -614,7 +645,9 @@ void PVE_ApplyBotItemAttributesOnEntity(int entity, BotItem item)
     }
 }
 
-// Apply player attributes from config on a given client
+/**
+ * Apply player attributes from config on a given client.
+ */
 void PVE_ApplyPlayerAttributes(int client)
 {
     for (int i = 0; i < g_hPlayerAttributes.Length; i++)
@@ -625,7 +658,9 @@ void PVE_ApplyPlayerAttributes(int client)
     }
 }
 
-// Create and give wearable to client with a given item definition
+/**
+ * Create and give wearable to client with a given item definition.
+ */
 int PVE_GiveWearableToClient(int client, int itemDef)
 {
     int hat = CreateEntityByName("tf_wearable");
@@ -651,6 +686,7 @@ void PVE_EndSpyBlocking()
 {
     if (!g_bSpyCapBlocking)
     {
+        LogError("PVE_EndSpyBlocking called when spy blocking is not enabled.");
         return;
     }
 
@@ -658,19 +694,21 @@ void PVE_EndSpyBlocking()
 
     for (int i = 1; i <= MaxClients; i++)
     {
-        if (!IsClientInGame(i))
+        if (PVE_RequiresBlockCapture(i))
         {
-            continue;
+            PVE_RestoreCaptureOnClient(i);
         }
-
-        PVE_EnableCapture(i);
     }
 }
 
 void PVE_StartSpyBlocking()
 {
+    // Spy cap blocking called while it's already on. Just reset the timer.
     if (g_bSpyCapBlocking)
     {
+        delete g_TimerDisableCapBlocking;
+        g_TimerDisableCapBlocking = CreateTimer(sm_engipve_spy_capblock_time.FloatValue, Timer_DisableSpyBlocking);
+        LogMessage("PVE_StartSpyBlocking called when spy capping is already enabled. Resetting the timer.");
         return;
     }
 
@@ -679,32 +717,31 @@ void PVE_StartSpyBlocking()
         return;
     }
 
-    g_bSpyCapBlocking = true;
-    CreateTimer(sm_engipve_spy_capblock_time.FloatValue, Timer_DisableSpyBlocking);
+    g_bSpyCapBlocking         = true;
+    g_TimerDisableCapBlocking = CreateTimer(sm_engipve_spy_capblock_time.FloatValue, Timer_DisableSpyBlocking);
 
     for (int i = 1; i <= MaxClients; i++)
     {
-        if (!IsClientInGame(i))
+        if (PVE_RequiresBlockCapture(i))
         {
-            continue;
+            PrintHintText(i, "Capturing points is not allowed for Spies for the next %.2f seconds", sm_engipve_spy_capblock_time.FloatValue);
+            PVE_BlockCaptureOnClient(i);
         }
-
-        if (TF2_GetPlayerClass(i) != TFClass_Spy)
-        {
-            continue;
-        }
-
-        PrintHintText(i, "Capturing points is not allowed for Spies for the next %.2f seconds", sm_engipve_spy_capblock_time.FloatValue);
-        PVE_DisableCapture(i);
     }
 }
 
-void PVE_DisableCapture(int client)
+bool PVE_RequiresBlockCapture(int client)
+{
+    return PVE_IsHumanClient(client)
+        && TF2_GetPlayerClass(client) == TFClass_Spy;
+}
+
+void PVE_BlockCaptureOnClient(int client)
 {
     TF2Attrib_SetByName(client, "increase player capture value", -1.0);
 }
 
-void PVE_EnableCapture(int client)
+void PVE_RestoreCaptureOnClient(int client)
 {
     TF2Attrib_RemoveByName(client, "increase player capture value");
 }
@@ -713,7 +750,6 @@ void PVE_EnableCapture(int client)
 // Commands
 //-------------------------------------------------------//
 
-// sv_danepve_reload
 Action cReload(int client, int args)
 {
     Config_Load();
@@ -728,7 +764,10 @@ Action cJoinTeam(int client, const char[] command, int argc)
     GetCmdArg(1, szTeamArg, sizeof(szTeamArg));
 
     // Whitelist spectator commands.
-    if (StrEqual(szTeamArg, "spec", false) || StrEqual(szTeamArg, "spectate", false) || StrEqual(szTeamArg, "spectator", false) || StrEqual(szTeamArg, "blue", false))
+    if (StrEqual(szTeamArg, "spec", false)
+        || StrEqual(szTeamArg, "spectate", false)
+        || StrEqual(szTeamArg, "spectator", false)
+        || StrEqual(szTeamArg, "blue", false))
     {
         return Plugin_Continue;
     }
@@ -743,7 +782,6 @@ Action cAutoTeam(int client, const char[] command, int argc)
     return Plugin_Handled;
 }
 
-// sm_becomeengibot
 Action cBecomeEngiBot(int client, int args)
 {
     TF2_ChangeClientTeam(client, TFTeam_Bots);
@@ -754,32 +792,46 @@ Action cBecomeEngiBot(int client, int args)
 //-------------------------------------------------------//
 // Game Events
 //-------------------------------------------------------//
+
+/**
+ * post_inventory_application
+ */
 public Action post_inventory_application(Event event, const char[] name, bool dontBroadcast)
 {
     int client = GetClientOfUserId(event.GetInt("userid"));
 
-    if (IsFakeClient(client))
+    if (PVE_IsBotClient(client))
     {
         PVE_EquipBotItems(client);
         PVE_ApplyPlayerAttributes(client);
     }
-    else {
-        if (g_bSpyCapBlocking && TF2_GetPlayerClass(client) == TFClass_Spy)
+
+    // Restore cap blocking attributes on the player.
+    if (PVE_IsHumanClient(client))
+    {
+        if (g_bSpyCapBlocking && PVE_RequiresBlockCapture(client))
         {
-            PVE_DisableCapture(client);
+            PVE_BlockCaptureOnClient(client);
         }
         else {
-            PVE_EnableCapture(client);
+            PVE_RestoreCaptureOnClient(client);
         }
     }
 
     return Plugin_Continue;
 }
 
+/**
+ * player_death
+ */
 public Action player_death(Event event, const char[] name, bool dontBroadcast)
 {
-    int  client = GetClientOfUserId(event.GetInt("userid"));
-    bool isBot  = IsFakeClient(client);
+    int client = GetClientOfUserId(event.GetInt("userid"));
+
+    if (!PVE_IsBotClient(client))
+    {
+        return Plugin_Continue;
+    }
 
     // If we're on round end
     if (g_bIsRoundEnd)
@@ -788,18 +840,18 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast)
         if (!sm_engipve_respawn_bots_on_round_end.BoolValue)
         {
             // Bail out.
-            return Plugin_Handled;
+            return Plugin_Continue;
         }
     }
 
-    if (isBot)
-    {
-        CreateTimer(0.1, Timer_RespawnBot, client);
-    }
+    CreateTimer(0.1, Timer_RespawnBot, client);
 
     return Plugin_Continue;
 }
 
+/**
+ * teamplay_setup_finished
+ */
 public Action teamplay_setup_finished(Event event, const char[] name, bool dontBroadcast)
 {
     g_bIsRoundActive   = true;
@@ -809,6 +861,9 @@ public Action teamplay_setup_finished(Event event, const char[] name, bool dontB
     return Plugin_Continue;
 }
 
+/**
+ * teamplay_point_captured
+ */
 public Action teamplay_point_captured(Event event, const char[] name, bool dontBroadcast)
 {
     if (!tf_gamemode_cp.BoolValue)
@@ -820,6 +875,9 @@ public Action teamplay_point_captured(Event event, const char[] name, bool dontB
     return Plugin_Continue;
 }
 
+/**
+ * teamplay_round_win
+ */
 public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast)
 {
     g_bIsRoundActive = false;
@@ -827,6 +885,9 @@ public Action teamplay_round_win(Event event, const char[] name, bool dontBroadc
     return Plugin_Continue;
 }
 
+/**
+ * teamplay_round_start
+ */
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast)
 {
     g_bIsRoundEnd    = false;
@@ -840,7 +901,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 //-------------------------------------------------------//
 public Action Timer_OnClientConnect(Handle timer, any client)
 {
-    if (IsFakeClient(client))
+    if (PVE_IsBotClient(client))
     {
         // Bots need to be renamed, and force their team to RED.
         PVE_RenameBotClient(client);
@@ -852,17 +913,22 @@ public Action Timer_OnClientConnect(Handle timer, any client)
 
 public Action Timer_RespawnBot(Handle timer, any client)
 {
-    TF2_RespawnPlayer(client);
+    if (PVE_IsBotClient(client))
+    {
+        TF2_RespawnPlayer(client);
+    }
+
     return Plugin_Handled;
 }
 
-public Action Timer_DisableSpyBlocking(Handle timer, any client)
+public Action Timer_DisableSpyBlocking(Handle timer)
 {
     PVE_EndSpyBlocking();
+
     return Plugin_Handled;
 }
 
-public Action Timer_UpdateRoundTime(Handle timer, any ent)
+public Action Timer_UpdateRoundTime(Handle timer)
 {
     // Round is not active - do nothing.
     if (!g_bIsRoundActive)
@@ -1002,7 +1068,7 @@ public MRESReturn CTFNavMesh_ComputeIncursionDistance_Post()
     return MRES_Ignored;
 }
 
-void PerformEnclosureFixes(bool apply)
+stock void PerformEnclosureFixes(bool apply)
 {
     char szMap[32];
     GetCurrentMap(szMap, sizeof(szMap));
@@ -1031,4 +1097,13 @@ void PerformEnclosureFixes(bool apply)
         vecPos[2] += apply ? upOffset : -upOffset;
         SetEntPropVector(point, Prop_Data, "m_vecAbsOrigin", vecPos);
     }
+}
+
+stock bool IsValidClient(int entity)
+{
+    if (entity <= 0) return false;
+    if (entity > MaxClients) return false;
+    if (!IsClientInGame(entity)) return false;
+
+    return true;
 }

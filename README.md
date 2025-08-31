@@ -32,11 +32,14 @@ Plugin is configured inside the `configs/tf_engipve.cfg` directory.
 
 ## Update History
 
+### 0.9.2
+- Fixes related to deferred actions (like Timers) not handling disconnected clients properly.
+
 ### 0.9.1
-- Potential fix for Enclosure map
+- Potential fix for Enclosure map.
 
 ### 0.9.0
-- Removed CTF related experimental patches
+- Removed CTF related experimental patches.
 
 ### 0.8.6
 - Spy cap blocking feature doesn't apply in Payload mode.
