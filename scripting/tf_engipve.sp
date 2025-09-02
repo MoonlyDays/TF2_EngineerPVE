@@ -215,7 +215,7 @@ public OnMapStart()
 
 public OnClientPutInServer(int client)
 {
-    if (IsClientSourceTV(client))
+    if (IsClientSourceTV(client) || IsClientReplay(client))
         return;
 
     CreateTimer(0.1, Timer_OnClientConnect, client);
